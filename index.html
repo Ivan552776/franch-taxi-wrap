@@ -31,7 +31,8 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-
 .views button,.chip,.seg button{min-height:44px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;font:600 13px/1 var(--body);color:var(--fg);background:rgba(30,32,34,.86);border:1px solid var(--line);border-radius:999px;padding:9px 13px;cursor:pointer;backdrop-filter:blur(6px)}
 .views button:hover,.chip:hover{border-color:#4a4e52}
 .views button:focus-visible,.sw:focus-visible,.chip:focus-visible,.seg button:focus-visible,.var:focus-visible,.zone-tab:focus-visible,.btn:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
-.loading{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-weight:600;color:var(--muted)}
+.loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:calc(100% - 32px);text-align:center;pointer-events:none;font-weight:600;color:#fff;background:rgba(0,0,0,.72);padding:8px 14px;border-radius:12px}
+.views button[aria-pressed="true"]{background:var(--yellow);color:var(--yellow-ink);border-color:var(--yellow)}
 .loading[hidden]{display:none!important}
 .hint{position:absolute;top:max(44px,calc(env(safe-area-inset-top,0px) + 34px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));font-size:12px;line-height:1.4;color:var(--muted);pointer-events:none}
 .panel{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;min-height:0;padding-block:16px max(28px,calc(env(safe-area-inset-bottom,0px) + 16px));overscroll-behavior:contain;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -79,8 +80,9 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:12.5p
   .app{grid-template-columns:minmax(0,1fr) min(340px,45vw);grid-template-rows:100%}
   .panel{border-top:0;border-left:1px solid var(--line)}
 }
-@media (max-width:400px){ .views{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none} .hint .long{display:none} }
-@media (min-width:401px){ .hint .short{display:none} }
+@media (max-width:400px), (max-height:500px){ .views{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)} }
+.hint .short{display:none}
+@media (pointer:coarse), (max-width:400px), (max-height:500px){ .hint .long{display:none} .hint .short{display:inline} }
 @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
 </style>
 
@@ -863,15 +865,16 @@ function scheduleDecals(){ if (decalRaf) return; decalRaf = requestAnimationFram
 function stripeTex(color){ if (sharedTex[color]) return sharedTex[color]; const c=document.createElement('canvas'); c.width=64; c.height=8; const g=c.getContext('2d'); g.fillStyle=color; g.fillRect(0,0,64,8); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.userData.shared=true; return (sharedTex[color]=t); }
 
 /* ---------------- Камера ---------------- */
-let anim = null; let dirty = true;
+let anim = null; let dirty = true; let viewFrac = 1;
 function goView(v){
   const L = carSize.x||4.5, H = carSize.y||1.6; const asp = camera.aspect||1.4;
-  const vt = Math.tan(THREE.MathUtils.degToRad(camera.fov)/2), ht = vt*asp;
-  const fitSide = (L*1.06/2)/ht + (carSize.z||2)/2, fitTop = (H*1.6/2)/vt;
+  const vt = Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*viewFrac, ht = Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*asp;
+  const fitSide = (L*1.06/2)/ht + (carSize.z||2)/2, fitTop = (H*1.75/2)/vt;
   const d = Math.max(fitSide, fitTop, 3.2);
   const dr = Math.max(((carSize.z||2)*1.25/2)/ht + L/2, fitTop, 3.2);
-  const P = { three:[d*0.78,H*1.15,d*0.82], left:[0.01,H*0.62,-d], right:[0.01,H*0.62,d], rear:[-dr,H*1.05,0.01], front:[dr,H*0.95,0.01], hood:[L*0.22+dr*0.55,H*2.9,0.01] }[v];
+  const P = { three:[d*0.78,H*1.15,d*0.82], left:[0.01,H*0.62,-d], right:[0.01,H*0.62,d], rear:[-dr,H*1.05,0.01], front:[dr,H*0.95,0.01], hood:[L*0.22+dr*0.7,H*3.3,0.01] }[v];
   if (!P) return;
+  document.querySelectorAll('[data-view]').forEach(b=>{ const on = b.dataset.view===v; b.setAttribute('aria-pressed', String(on)); if (on && b.scrollIntoView) b.scrollIntoView({ block:'nearest', inline:'nearest' }); });
   const tFrom = controls.target.clone(), tTo = new THREE.Vector3(v==='hood' ? L*0.22 : 0, H*(v==='hood'?0.55:0.48), 0);
   const from = camera.position.clone(), to = new THREE.Vector3(...P); const t0 = performance.now(); const dur = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 650;
   anim = (now)=>{ const k = Math.min(1,(now-t0)/dur); const e = k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; camera.position.lerpVectors(from,to,e); controls.target.lerpVectors(tFrom,tTo,e); if(k>=1) anim=null; };
@@ -896,7 +899,7 @@ canvas.addEventListener('pointerup', e=>{
 
 function resize(){ const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setPixelRatio(DPR()); renderer.setSize(w,h,false); dirty = true;
   const vb = document.querySelector('.views'); const off = vb ? Math.min(h*0.3, vb.offsetHeight + 8) : 0;   // машина по центру над кнопками
-  camera.aspect = w/(h+off); camera.fov = w < 600 ? 40 : 32; camera.setViewOffset(w, h+off, 0, off, w, h); camera.updateProjectionMatrix();
+  viewFrac = h/(h+off); camera.aspect = w/(h+off); camera.fov = w < 600 ? 40 : 32; camera.setViewOffset(w, h+off, 0, off, w, h); camera.updateProjectionMatrix();
   requestAnimationFrame(()=>renderer.render(scene, camera)); }
 new ResizeObserver(resize).observe(stage); resize();
 const openBtn = document.getElementById('openBtn');
@@ -905,7 +908,7 @@ const AX = { x:new THREE.Vector3(1,0,0), y:new THREE.Vector3(0,1,0), z:new THREE
 function animateParts(){ if (!parts.length) return; openAmt += (openTarget - openAmt)*0.12; if (Math.abs(openTarget-openAmt) < 0.001) openAmt = openTarget;
   for (const p of parts){ _q.setFromAxisAngle(AX[p.axis], p.ang*openAmt); p.node.quaternion.copy(p.q0).multiply(_q); } }
 controls.addEventListener('change', ()=>{ dirty = true; });
-controls.addEventListener('start', ()=>{ anim = null; });
+controls.addEventListener('start', ()=>{ anim = null; document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false')); });
 renderer.setAnimationLoop((now)=>{
   const moving = !!anim || spin || openAmt !== openTarget;
   if (anim) anim(now); animateParts();
@@ -925,7 +928,7 @@ function renderStyles(){ const el=$('styles'); el.replaceChildren(...STYLES.map(
   b.innerHTML = `<span class="p" style="background:${s.bg||'linear-gradient(115deg,#ffd21a 0 58%,#141516 58% 62%,#ffd21a 62% 66%,#141516 66% 100%)'};border:1px solid #333;display:block;position:relative"><span style="position:absolute;left:8px;top:8px;bottom:8px;width:4px;background:${s.acc};border-radius:2px"></span><span style="position:absolute;left:18px;top:9px;width:55%;height:6px;background:${s.fg};border-radius:3px"></span><span style="position:absolute;left:18px;top:20px;width:38%;height:4px;background:${s.fg};opacity:.6;border-radius:2px"></span></span>${s.name}`;
   b.addEventListener('click',()=>{ state.style=s.id; save(); renderStyles(); scheduleDecals(); renderSummary(); }); return b; })); }
 function renderZones(){
-  const tabs = $('zoneTabs'); tabs.replaceChildren(...ZONES.map(z=>{ const b=document.createElement('button'); b.type='button'; b.className='zone-tab'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(z.id===state.zone)); b.innerHTML = `${z.tab}<small>вариант ${state.pick[z.id]+1}</small>`; b.addEventListener('click',()=>{ state.zone=z.id; save(); renderZones(); goView(z.id==='left'?'left':z.id==='right'?'right':z.id==='rear'?'rear':'hood'); }); return b; }));
+  const tabs = $('zoneTabs'); tabs.replaceChildren(...ZONES.map(z=>{ const b=document.createElement('button'); b.type='button'; b.className='zone-tab'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(z.id===state.zone)); b.innerHTML = `${z.tab}<small>${state.split==='same' && (z.id==='left'||z.id==='right') ? 'общий текст' : 'вариант '+(state.pick[z.id]+1)}</small>`; b.addEventListener('click',()=>{ state.zone=z.id; save(); renderZones(); goView(z.id==='left'?'left':z.id==='right'?'right':z.id==='rear'?'rear':'hood'); }); return b; }));
   const Z = ZONES.find(z=>z.id===state.zone);
   $('zoneWho').textContent = (state.split==='same' && (Z.id==='left'||Z.id==='right')) ? 'Сейчас режим «Одинаково с двух сторон» — на бортах общий текст для всех. Переключите на «Разное по сторонам», чтобы выбрать вариант.' : 'Для кого: ' + Z.who;
   $('vars').replaceChildren(...Z.vars.map((v,i)=>{ const b=document.createElement('button'); b.type='button'; b.className='var'; b.setAttribute('aria-pressed', String(state.pick[Z.id]===i));
@@ -943,7 +946,7 @@ function summaryText(){
 function renderSummary(){ $('summary').textContent = summaryText(); }
 $('copy').addEventListener('click', ()=>{ const t = summaryText(); const done=()=>{ $('copied').textContent='Скопировано — вставьте в чат.'; $('copied').hidden=false; setTimeout(()=>$('copied').hidden=true, 2500); };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(()=>{ legacyCopy(); }); else legacyCopy(); });
-function legacyCopy(){ selectSummary(); let ok = false; try { ok = document.execCommand('copy'); } catch(e){} if (ok){ const c=$('copied'); c.textContent='Скопировано'; c.hidden=false; } }
+function legacyCopy(){ selectSummary(); let ok = false; try { ok = document.execCommand('copy'); } catch(e){} if (ok){ getSelection().removeAllRanges(); const c=$('copied'); c.textContent='Скопировано — вставьте в чат.'; c.hidden=false; setTimeout(()=>c.hidden=true, 2500); } }
 function selectSummary(){ const r=document.createRange(); r.selectNodeContents($('summary')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); const c=$('copied'); c.textContent='Текст выделен — скопируйте вручную (⌘C или Ctrl+C).'; c.hidden=false; }
 function renderCredits(){ const m = MODELS.find(x=>x.id===state.model);
   $('credits').innerHTML = `3D-модель «${m.name}»: автор ${m.author}, <a href="${m.url}" target="_blank" rel="noopener">Sketchfab</a>, лицензия ${m.lic}. Модель упрощена и перекрашена для макета. QR-коды ведут на ${SITE} (в рабочих файлах — личный QR франча).`; }
