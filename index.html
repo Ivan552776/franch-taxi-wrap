@@ -519,72 +519,87 @@ function drawBrand(g, x, yBase, hgt, col, onDark, badge){
   return hgt*1.15 + g.measureText('ФРАНЧ ТАКСИ').width;
 }
 
-/* Премиальная наклейка: надпись бренда, крупный заголовок, подзаголовок, кнопка-призыв, QR в белой плашке.
-   Все размеры — от высоты наклейки, чтобы на любом кузове пропорции были одинаковыми. */
+/* форма плашки: задний край скошен «вперёд по ходу», как клинья печати */
+function plaquePath(g, W, H, cut, dir){
+  g.beginPath();
+  if (!cut) g.rect(0, 0, W, H);
+  else if (dir > 0){ g.moveTo(0,0); g.lineTo(W,0); g.lineTo(W-cut,H); g.lineTo(0,H); }
+  else { g.moveTo(0,0); g.lineTo(W-cut,0); g.lineTo(W,H); g.lineTo(0,H); }
+  g.closePath();
+}
+/* Наклейка: знак + «ФРАНЧ ТАКСИ», крупный заголовок, подзаголовок целиком, QR на белой карточке.
+   Только сплошные цвета плёнки. Всё в долях высоты наклейки H — одинаковые пропорции на любом кузове. */
 function panelTexture(w, h, v, opts){
   const st = STYLES.find(s=>s.id===state.style);
   const PX = Math.min(COARSE ? 2048 : 2600, renderer.capabilities.maxTextureSize) / Math.max(w, h);   // пикселей на метр — чётко при приближении
   const W = Math.round(w*PX), H = Math.round(h*PX);
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   const glass = !!opts.glass;
-  const panel = st.panel || glass;
+  const panel = st.panel || glass, print = !panel;
   const bg = glass ? '#0a0b0c' : st.bg;
   const dark = glass || (st.panel ? st.id !== 'sun' : !!opts.onDark);
   const ink = dark ? '#ffffff' : '#141516';
-  const sub = dark ? 'rgba(255,255,255,.85)' : 'rgba(20,21,22,.82)';
+  const sub = dark ? (glass ? '#ffffff' : '#e9e6dd') : '#141516';
   const yBody = !glass && state.scheme === 'msk';
   const acc = (st.id === 'sun' || (yBody && !st.panel)) && !glass ? '#141516' : '#ffd21a';
   const accInk = acc === '#ffd21a' ? '#141516' : '#ffd21a';
   const brandCol = panel ? acc : ink;
-  const R = Math.min(W, H) * 0.10;
+  const badge = (yBody && print) || (st.id === 'sun' && !glass);
+  const dir = opts.side === 'left' ? -1 : 1;            // на левом борту нос машины слева
+  const cut = panel && !glass ? H*0.30 : 0;             // скос плашки по ходу движения
+  const gap = opts.gap || null;                         // молдинг: [верх, низ] в долях H
   if (panel){
-    g.save(); roundRect(g, 0, 0, W, H, R); g.clip();
+    g.save(); plaquePath(g, W, H, cut, dir); g.clip();
     g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    if (!glass){ // мягкий блик сверху
-      const sh = g.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(255,255,255,.10)'); sh.addColorStop(.45, 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(0, 0, W, H);
-    }
-    // диагональные «скоростные» полосы у правого края
-    g.globalAlpha = glass ? 0 : dark ? .16 : .12; g.fillStyle = acc;
-    for (let i = 0; i < 4; i++){ const x = W*0.56 + i*H*0.16; g.beginPath(); g.moveTo(x, H); g.lineTo(x + H*0.07, H); g.lineTo(x + H*0.07 + H*0.5, 0); g.lineTo(x + H*0.5, 0); g.closePath(); g.fill(); }
-    g.globalAlpha = 1; g.restore();
-    if (yBody && st.id === 'sun'){ const lw = Math.min(W,H)*0.03; g.lineWidth = lw; g.strokeStyle = '#141516'; roundRect(g, lw/2, lw/2, W-lw, H-lw, R); g.stroke(); }
+    if (cut){ const t = H*0.06; g.fillStyle = acc; g.beginPath();   // акцентная кромка вдоль скоса
+      if (dir > 0){ g.moveTo(W-t,0); g.lineTo(W,0); g.lineTo(W-cut,H); g.lineTo(W-cut-t,H); }
+      else { g.moveTo(W-cut-t,0); g.lineTo(W-cut,0); g.lineTo(W,H); g.lineTo(W-t,H); }
+      g.closePath(); g.fill(); }
+    g.restore();
   }
-  const pad = H * 0.13;
+  const pad = H*(print ? 0.10 : glass ? 0.14 : 0.13);
+  const padX = glass ? Math.max(pad, W*0.08) : pad;     // стекло сужается к верху
   const withQR = opts.qr !== false;
-  const qrS = withQR ? (panel ? Math.min(H - pad*2, W*0.3) : Math.min(H*0.9, W*0.32)) : 0;
-  const wedgeOn = !panel && st.livery && withQR && W > H*1.6;
-  if (wedgeOn){ // фирменный клин за QR — печать по кузову, только внутри баннера
-    const wedge = yBody ? '#141516' : '#ffd21a', lean = H*0.42, qx0 = W - H*0.05 - qrS;
+  let qrS = withQR ? Math.min(H - pad*2, W*0.3, H*(glass ? 0.76 : print ? 0.78 : 0.7)) : 0, qy = (H - qrS)/2;
+  if (gap && withQR){ const a = gap[0]*H, b = H - gap[1]*H, top = a >= b; qrS = Math.min(qrS, (top ? a : b) - H*0.06); qy = top ? (a - qrS)/2 : gap[1]*H + (b - qrS)/2; }
+  const qRight = W - padX - cut - (cut ? H*0.04 : 0), qx0 = qRight - qrS;
+  const wedgeOn = print && st.livery && withQR && W > H*1.6;
+  if (wedgeOn){ // фирменный клин за QR — печать по кузову, только внутри баннера, наклон по ходу
+    const wedge = yBody ? '#141516' : '#ffd21a', lean = H*0.42*dir;
     const par = (x0, x1)=>{ g.beginPath(); g.moveTo(x0 - lean/2, H); g.lineTo(x1 - lean/2, H); g.lineTo(x1 + lean/2, 0); g.lineTo(x0 + lean/2, 0); g.closePath(); g.fill(); };
-    g.fillStyle = wedge; par(qx0 - pad*1.5, W - lean/2);
+    g.fillStyle = wedge; par(qx0 - pad*1.5, W + H*0.42);
     par(qx0 - pad*1.5 - H*0.17, qx0 - pad*1.5 - H*0.10);
     par(qx0 - pad*1.5 - H*0.29, qx0 - pad*1.5 - H*0.25);
   }
-  const textW = wedgeOn ? (W - H*0.05 - qrS) - pad*1.5 - H*0.29 - H*0.21 - pad*1.3 : W - pad*2 - (withQR ? qrS + pad*0.9 : 0);
-  let x = pad, y = pad;
+  const textW = wedgeOn ? qx0 - pad*1.5 - H*0.5 - pad*1.3 : qx0 - padX - (withQR ? pad*0.9 : 0);
+  let x = padX, y = pad;
   g.textBaseline = 'alphabetic';
-  // надпись бренда
   const eyebrow = Math.round(H*(panel ? 0.085 : 0.095));
   const isBrand = v.t.indexOf('ФРАНЧ ТАКСИ') === 0;
-  if (!isBrand){ drawBrand(g, x, y + eyebrow, eyebrow, brandCol, dark, (yBody && !panel) || (st.id==='sun' && !glass)); y += eyebrow*1.75; }
-  const lx = isBrand ? Math.round(H*0.2)*1.3 : 0;   // место под знак перед названием
-  // заголовок (до 2 строк)
-  const print = !panel && !glass;
+  const brandLine = ()=>{ drawBrand(g, x, y + eyebrow, eyebrow, brandCol, dark, badge); y += eyebrow*1.75; };
+  if (!isBrand && !gap) brandLine();
+  const lx = isBrand ? Math.round(H*0.2)*1.3 : 0;
+  const topLim = gap ? gap[0]*H - H*0.03 : Infinity;
   let ts = Math.round(H*(panel ? 0.2 : 0.3)); let lines = [v.t]; const tW = textW - lx;
+  if (gap) ts = Math.min(ts, Math.floor((topLim - y)/0.98));
   g.font = `${DW} ${ts}px ${DISPLAY}`;
   while (g.measureText(v.t).width > tW && ts > H*(print ? 0.2 : 0.125)){ ts -= 2; g.font = `${DW} ${ts}px ${DISPLAY}`; }
   if (isBrand){ while (g.measureText(v.t).width > tW && ts > H*0.06){ ts -= 2; g.font = `${DW} ${ts}px ${DISPLAY}`; } }
-  else if (g.measureText(v.t).width > tW){ ts = Math.round(H*(print ? 0.185 : 0.15)); for (;;){ g.font = `${DW} ${ts}px ${DISPLAY}`; lines = wrapLines(g, v.t, tW); if ((lines.length <= 2 && lines.every(l=>g.measureText(l).width <= tW)) || ts < H*0.07) break; ts -= 2; } }
+  else if (g.measureText(v.t).width > tW){ ts = Math.round(H*(print ? 0.185 : 0.15)); if (gap) ts = Math.min(ts, Math.floor((topLim - y)/2.1));
+    for (;;){ g.font = `${DW} ${ts}px ${DISPLAY}`; lines = wrapLines(g, v.t, tW); if ((lines.length <= 2 && lines.every(l=>g.measureText(l).width <= tW)) || ts < H*0.06) break; ts -= 2; } }
   g.fillStyle = ink;
-  if (isBrand) drawLogo(g, x, y + ts*0.02, ts*1.12, dark, (yBody && !panel) || (st.id==='sun' && !glass));
+  if (isBrand) drawLogo(g, x, y + ts*0.02, ts*1.12, dark, badge);
   for (const L of lines){ y += ts*0.98; g.fillText(L, x + (isBrand ? ts*1.3 : 0), y); y += ts*0.14; }
-  // подзаголовок
-  const ss = Math.round(Math.min(H*(panel ? 0.095 : 0.11), ts*0.6));
-  g.font = `600 ${ss}px ${BODY}`; g.fillStyle = sub; y += ss*0.55;
-  if (print){ let s2 = ss; while (g.measureText(v.s).width > textW && s2 > H*0.06){ s2 -= 1; g.font = `600 ${s2}px ${BODY}`; } }
-  for (const L of wrapLines(g, v.s, textW).slice(0, 2)){ y += ss*1.05; g.fillText(L, x, y); y += ss*0.22; }
-  // призыв — «кнопка»
-  if (v.c && !wedgeOn){
+  if (gap){ y = gap[1]*H + H*0.03; if (!isBrand){ brandLine(); y -= eyebrow*0.3; } }
+  // подзаголовок: утверждённый текст целиком — уменьшаем кегль, но не обрезаем
+  let ss = Math.round(Math.min(H*(panel ? 0.095 : 0.11), ts*0.6));
+  if (gap) ss = Math.min(ss, Math.floor((H - pad*0.6 - y)/1.05));
+  const sw = print ? 700 : 600, maxSL = (print || gap) ? 1 : 2;
+  g.font = `${sw} ${ss}px ${BODY}`;
+  while (wrapLines(g, v.s, textW).length > maxSL && ss > H*0.05){ ss -= 2; g.font = `${sw} ${ss}px ${BODY}`; }
+  g.fillStyle = sub; if (!gap) y += ss*0.55;
+  for (const L of wrapLines(g, v.s, textW)){ y += ss*1.05; g.fillText(L, x, y); y += ss*0.22; }
+  if (v.c && !wedgeOn && !gap){   // призыв — «кнопка»
     let cs = Math.round(H*0.072); g.font = `700 ${cs}px ${BODY}`;
     while (g.measureText(v.c).width + cs*1.6 > textW && cs > H*0.035){ cs -= 1; g.font = `700 ${cs}px ${BODY}`; }
     const cw = Math.min(textW, g.measureText(v.c).width + cs*1.6), ch = cs*1.9;
@@ -594,20 +609,19 @@ function panelTexture(w, h, v, opts){
       g.fillStyle = accInk; g.save(); g.beginPath(); g.rect(x, cy, cw, ch); g.clip(); g.fillText(v.c, x + cs*0.8, cy + ch*0.66); g.restore();
     }
   }
-  // QR
-  if (withQR){
-    const tile = qrS, qx = W - (panel ? pad : H*0.05) - tile, qy = (H - tile)/2;
+  if (withQR){   // QR — на сплошной белой карточке (на стекле — участок без перфорации)
+    const tile = qrS, qx = qx0;
     g.fillStyle = '#ffffff'; roundRect(g, qx, qy, tile, tile, tile*0.08); g.fill();
-    if (!panel && !dark && !yBody){ const lw = tile*0.035; g.lineWidth = lw; g.strokeStyle = '#ffd21a'; roundRect(g, qx + lw/2, qy + lw/2, tile - lw, tile - lw, tile*0.07); g.stroke(); }
+    if (print && !dark && !yBody){ const lw = tile*0.035; g.lineWidth = lw; g.strokeStyle = '#ffd21a'; roundRect(g, qx + lw/2, qy + lw/2, tile - lw, tile - lw, tile*0.07); g.stroke(); }
     const m = tile*0.03, qs = tile - 2*m - tile*0.1; drawQR(g, opts.url, qx + (tile - qs)/2, qy + m, qs);
-    g.font = `800 ${Math.round(tile*(opts.glass ? 0.066 : 0.082))}px ${BODY}`; g.fillStyle = '#141516'; g.textAlign = 'center'; g.fillText(opts.glass ? 'Пассажиру: наведи камеру' : 'Наведи камеру', qx + tile/2, qy + tile - tile*0.04); g.textAlign = 'left';
+    g.font = `800 ${Math.round(tile*(glass ? 0.066 : 0.082))}px ${BODY}`; g.fillStyle = '#141516'; g.textAlign = 'center'; g.fillText(glass ? 'Пассажиру: наведи камеру' : 'Наведи камеру', qx + tile/2, qy + tile - tile*0.04); g.textAlign = 'left';
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.generateMipmaps = true; return t;
 }
 /* капот при печати по кузову: знак + название по центру, сайт под ним */
 function hoodTexture(w, h, v, opts){
   const st = STYLES.find(s=>s.id===state.style);
-  if (st.panel || opts.qr) return panelTexture(w, h, v, opts);
+  if (opts.qr) return panelTexture(w, h, v, opts);
   const PX = Math.min(COARSE ? 2048 : 2600, renderer.capabilities.maxTextureSize) / Math.max(w, h);
   const W = Math.round(w*PX), H = Math.round(h*PX);
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
@@ -761,15 +775,25 @@ function buildDecals(){
   let yLo = H*0.18, yHi = yBelt - H*0.14;
   if (sch.taxi) yHi = yBelt - H*0.17;
   if (sch.stripes) yLo = sBase + H*0.088;
-  { // самая высокая сплошная окрашенная полоса двери: без молдингов, хрома и пластика
+  let molding = null;   // [низ, верх] молдинга внутри баннера, м
+  { // окрашенные полосы двери; если лучшая ниже 30 см — объединяем с соседней через узкий молдинг (текст его обходит)
     const isPaintZ = (x, y)=>{ ray.set(new THREE.Vector3(x, y, W*1.5), new THREE.Vector3(0,0,-1)); const hh = ray.intersectObject(car, true).find(q=>q.object.visible!==false); return !!hh && hh.object.userData.cls==='paint'; };
     const xs = [doorX0 + (doorX1-doorX0)*0.08, (doorX0+doorX1)/2, doorX1 - (doorX1-doorX0)*0.08];
-    let best = null, cur = null;
-    for (let y = yLo; y <= yHi + 1e-6; y += 0.01){ const ok = xs.every(x=>isPaintZ(x, y)); if (ok){ cur = cur ? [cur[0], y] : [y, y]; if (!best || cur[1]-cur[0] > best[1]-best[0]) best = cur; } else cur = null; }
-    if (best && best[1]-best[0] >= H*0.12){ yLo = best[0] + 0.012; yHi = best[1] - 0.012; }
+    const runs = []; let cur = null;
+    for (let y = yLo; y <= yHi + 1e-6; y += 0.01){ if (xs.every(x=>isPaintZ(x, y))) cur = cur ? [cur[0], y] : [y, y]; else if (cur){ runs.push(cur); cur = null; } }
+    if (cur) runs.push(cur);
+    const len = r => r[1] - r[0];
+    let best = runs.slice().sort((a,b)=>len(b)-len(a))[0] || null;
+    if (best && len(best) < 0.30){
+      const i = runs.indexOf(best);
+      const nb = [runs[i-1], runs[i+1]].filter(r=>r && len(r) >= 0.10 && Math.max(r[0],best[0]) - Math.min(r[1],best[1]) <= 0.13).sort((a,b)=>len(b)-len(a))[0];
+      if (nb){ molding = [Math.min(nb[1],best[1]), Math.max(nb[0],best[0])]; best = [Math.min(nb[0],best[0]), Math.max(nb[1],best[1])]; }
+    }
+    if (best && len(best) >= H*0.12){ yLo = best[0] + 0.012; yHi = best[1] - 0.012; }
   }
   if (yHi - yLo < H*0.1){ yHi = yLo + H*0.1; }
   const hgt = (yHi - yLo); const cy = (yLo+yHi)/2;
+  const gapF = molding ? [(yHi - molding[1])/hgt, (yHi - molding[0])/hgt] : null;
   for (const side of ['right','left']){
     const sign = side==='right' ? 1 : -1;      // правый борт = +Z
     const origin = new THREE.Vector3(cx, cy, sign*(W*1.5));
@@ -790,7 +814,7 @@ function buildDecals(){
     const zone = side==='right' ? 'right' : 'left';
     const url = `https://${SITE}/?utm_source=car_${zone==='left'?'l':'r'}`;
     const make = ()=> state.split==='same' ? sameTexture(w, hgt, `https://${SITE}/?utm_source=car_s`)
-      : panelTexture(w, hgt, ZONES.find(z=>z.id===zone).vars[state.pick[zone]], { url, onDark: SCHEMES.find(s=>s.id===state.scheme).paint < 0x666666 });
+      : panelTexture(w, hgt, ZONES.find(z=>z.id===zone).vars[state.pick[zone]], { url, side: zone, gap: gapF, onDark: SCHEMES.find(s=>s.id===state.scheme).paint < 0x666666 });
     const g = addDecal(paintMeshes, pos, e, new THREE.Vector3(w, hgt, W*0.16), make(), zone);
     painters[zone] = { mat:g.userData.mat, make };
   }
@@ -820,7 +844,7 @@ function buildDecals(){
       const e = basis(right, up, n);
       const center = bot.clone().add(top).multiplyScalar(0.5);
       const Z = ZONES.find(z=>z.id==='rear'); const v = Z.vars[state.pick.rear];
-      const ww = Math.max(0.6, zMax*2*0.86), hh = Math.min(slope*0.72, ww*0.40);
+      const ww = Math.max(0.6, zMax*2*0.96), hh = Math.min(slope*0.86, ww*0.48);
       const make = ()=> panelTexture(ww, hh, ZONES.find(z=>z.id==='rear').vars[state.pick.rear], { url:`https://${SITE}/?utm_source=car_b`, onDark:true, glass:true });
       const g = addDecal(targets, center, e, new THREE.Vector3(ww, hh, 0.35), make(), 'rear'); painters.rear = { mat:g.userData.mat, make };
     }
