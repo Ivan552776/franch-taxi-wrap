@@ -238,7 +238,7 @@ const SCHEMES = [
 ];
 
 const STYLES = [
-  { id:'brand', name:'Фирменная оклейка', bg:null, fg:'#141516', acc:'#ffd21a', sub:'#2b2d2f', panel:false, livery:true },
+  { id:'brand', name:'Печать по кузову', bg:null, fg:'#141516', acc:'#ffd21a', sub:'#2b2d2f', panel:false, livery:true },
   { id:'night', name:'Тёмная плашка', bg:'#141516', fg:'#ffffff', acc:'#ffd21a', sub:'#e9e6dd', panel:true },
   { id:'sun',   name:'Жёлтая плашка', bg:'#ffd21a', fg:'#141516', acc:'#141516', sub:'#2a2400', panel:true },
 ];
@@ -540,7 +540,15 @@ function panelTexture(w, h, v, opts){
   const pad = H * 0.13;
   const withQR = opts.qr !== false;
   const qrS = withQR ? Math.min(H - pad*2, W*0.3) : 0;
-  const textW = W - pad*2 - (withQR ? qrS + pad*0.9 : 0);
+  const wedgeOn = !panel && st.livery && withQR && W > H*1.6;
+  if (wedgeOn){ // фирменный клин за QR — печать по кузову, только внутри баннера
+    const wedge = yBody ? '#141516' : '#ffd21a', lean = H*0.42, qx0 = W - pad - qrS;
+    const par = (x0, x1)=>{ g.beginPath(); g.moveTo(x0 - lean/2, H); g.lineTo(x1 - lean/2, H); g.lineTo(x1 + lean/2, 0); g.lineTo(x0 + lean/2, 0); g.closePath(); g.fill(); };
+    g.fillStyle = wedge; par(qx0 - pad*1.5, W + lean);
+    par(qx0 - pad*1.5 - H*0.17, qx0 - pad*1.5 - H*0.10);
+    par(qx0 - pad*1.5 - H*0.29, qx0 - pad*1.5 - H*0.25);
+  }
+  const textW = wedgeOn ? (W - pad - qrS) - pad*1.5 - H*0.29 - H*0.21 - pad*1.3 : W - pad*2 - (withQR ? qrS + pad*0.9 : 0);
   let x = pad, y = pad;
   g.textBaseline = 'alphabetic';
   // надпись бренда
@@ -715,7 +723,7 @@ function buildDecals(){
   let doorX1 = state.area==='doors' ?  L*0.17 :  L*0.30;
   if (wheelSpan){ const m = L*0.035; doorX0 = Math.max(doorX0, wheelSpan[0] + m); doorX1 = Math.min(doorX1, wheelSpan[1] - m); }
   const cx = (doorX0+doorX1)/2, w = doorX1-doorX0;
-  let yLo = H*0.28, yHi = yBelt - H*0.14;
+  let yLo = H*0.225, yHi = yBelt - H*0.14;
   if (sch.taxi) yHi = yBelt - H*0.17;
   if (sch.stripes) yLo = H*0.31;
   const hgt = (yHi - yLo); const cy = (yLo+yHi)/2;
@@ -727,8 +735,6 @@ function buildDecals(){
     const pos = new THREE.Vector3(cx, cy, z);
     const right = new THREE.Vector3(sign,0,0), up = new THREE.Vector3(0,1,0), normal = new THREE.Vector3(0,0,sign);
     const e = basis(right, up, normal);
-    // фирменная графика на весь борт
-    if (st.livery){ const y0 = H*0.06, y1 = H*0.62; addDecal(paintMeshes, new THREE.Vector3(0, (y0+y1)/2, z), e, new THREE.Vector3(L*1.1, y1-y0, W*0.18), liveryTexture(sign, L, H, y0, y1, sch, wheelSpan), 'livery'); }
     // символика такси
     if (sch.taxi){
       const bx0 = -L*0.38, bx1 = L*0.22, bcx = (bx0+bx1)/2, bw = bx1-bx0;
@@ -886,7 +892,7 @@ function renderSchemes(){ const el=$('schemes'); el.replaceChildren(...SCHEMES.m
   $('schemeNote').textContent = SCHEMES.find(s=>s.id===state.scheme).note; }
 function seg(el, items, key){ el.replaceChildren(...items.map(([v,l])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=l; b.setAttribute('aria-pressed', String(state[key]===v)); b.addEventListener('click',()=>{ state[key]=v; save(); seg(el,items,key); if (key==='split') repaint(['left','right']); else scheduleDecals(); renderSummary(); renderZones(); }); return b; })); }
 function renderStyles(){ const el=$('styles'); el.replaceChildren(...STYLES.map(s=>{ const b=document.createElement('button'); b.type='button'; b.className='sw'; b.setAttribute('aria-pressed', String(s.id===state.style));
-  b.innerHTML = `<span class="p" style="background:${s.bg||'linear-gradient(115deg,#ffd21a 0 52%,#141516 52% 58%,#ffd21a 58% 64%,#141516 64% 100%)'};border:1px solid #333;display:block;position:relative"><span style="position:absolute;left:8px;top:8px;bottom:8px;width:4px;background:${s.acc};border-radius:2px"></span><span style="position:absolute;left:18px;top:9px;width:55%;height:6px;background:${s.fg};border-radius:3px"></span><span style="position:absolute;left:18px;top:20px;width:38%;height:4px;background:${s.fg};opacity:.6;border-radius:2px"></span></span>${s.name}`;
+  b.innerHTML = `<span class="p" style="background:${s.bg||'linear-gradient(115deg,#ffd21a 0 58%,#141516 58% 62%,#ffd21a 62% 66%,#141516 66% 100%)'};border:1px solid #333;display:block;position:relative"><span style="position:absolute;left:8px;top:8px;bottom:8px;width:4px;background:${s.acc};border-radius:2px"></span><span style="position:absolute;left:18px;top:9px;width:55%;height:6px;background:${s.fg};border-radius:3px"></span><span style="position:absolute;left:18px;top:20px;width:38%;height:4px;background:${s.fg};opacity:.6;border-radius:2px"></span></span>${s.name}`;
   b.addEventListener('click',()=>{ state.style=s.id; save(); renderStyles(); scheduleDecals(); renderSummary(); }); return b; })); }
 function renderZones(){
   const tabs = $('zoneTabs'); tabs.replaceChildren(...ZONES.map(z=>{ const b=document.createElement('button'); b.type='button'; b.className='zone-tab'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(z.id===state.zone)); b.innerHTML = `${z.tab}<small>вариант ${state.pick[z.id]+1}</small>`; b.addEventListener('click',()=>{ state.zone=z.id; save(); renderZones(); goView(z.id==='left'?'left':z.id==='right'?'right':z.id==='rear'?'rear':'hood'); }); return b; }));
