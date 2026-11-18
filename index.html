@@ -130,14 +130,16 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:12.5p
     </div>
     <div class="sec">
       <h3>Текст по зонам · по 3 варианта</h3>
+      <p class="note">Нажмите на вариант — он сразу появится на машине.</p>
       <div class="zone-tabs" role="tablist" id="zoneTabs"></div>
       <p class="zone-who" id="zoneWho"></p>
       <div class="vars" id="vars"></div>
     </div>
     <div class="sec">
       <h3>Ваш выбор</h3>
+      <p class="note">Всё, что выбрано выше, одним списком. Кнопка копирует его — вставьте в чат, чтобы прислать свой выбор.</p>
       <div class="summary" id="summary"></div>
-      <button class="btn" id="copy">Скопировать выбор</button>
+      <button class="btn" id="copy">Скопировать мой выбор для чата</button>
       <p class="note" id="copied" hidden>Скопировано — вставьте в чат.</p>
     </div>
     <div class="sec">
@@ -1032,7 +1034,7 @@ function renderZones(){
   const Z = ZONES.find(z=>z.id===state.zone);
   $('zoneWho').textContent = (state.split==='same' && (Z.id==='left'||Z.id==='right')) ? 'Сейчас режим «Одинаково с двух сторон» — на бортах общий текст для всех. Переключите на «Разное по сторонам», чтобы выбрать вариант.' : 'Для кого: ' + Z.who;
   $('vars').replaceChildren(...Z.vars.map((v,i)=>{ const b=document.createElement('button'); b.type='button'; b.className='var'; b.setAttribute('aria-pressed', String(state.pick[Z.id]===i));
-    b.innerHTML = `<span class="badge ${v.ok?'ok':'warn'}">${v.ok?'Можно ставить':'Нужна проверка'}</span><span class="t">${v.t}</span><span class="s">${v.s}${v.c?' · '+v.c:''}</span><span class="why">${v.why}</span>`;
+    b.innerHTML = `${v.ok ? '' : '<span class="badge warn">Нужна проверка</span>'}<span class="t">${v.t}</span><span class="s">${v.s}${v.c?' · '+v.c:''}</span><span class="why">${v.why}</span>`;
     b.setAttribute('aria-label', `Вариант ${i+1}: ${v.t}`);
     if (state.split==='same' && (Z.id==='left'||Z.id==='right')){ b.disabled = true; b.style.opacity = '.45'; }
     b.addEventListener('click',()=>{ state.pick[Z.id]=i; save(); renderZones(); repaint([Z.id]); renderSummary(); }); return b; }));
@@ -1051,7 +1053,14 @@ function selectSummary(){ const r=document.createRange(); r.selectNodeContents($
 function renderCredits(){ const m = MODELS.find(x=>x.id===state.model);
   $('credits').innerHTML = `3D-модель «${m.name}»: автор ${m.author}, <a href="${m.url}" target="_blank" rel="noopener">Sketchfab</a>, лицензия ${m.lic}. Модель упрощена и перекрашена для макета. QR-коды ведут на ${SITE} (в рабочих файлах — личный QR франча).`; }
 
-window.__ft = { state, showModel, buildDecals, repaint, goView, car:()=>car, THREE, info:()=>({ wheelSpan, size:carSize.toArray().map(v=>+v.toFixed(2)), paint:paintMeshes.length, glass:glassMeshes.length, decals:decals.map(g=>g.userData.zone+':'+g.children.length) }) };
+window.__ft = { state, showModel, buildDecals, repaint, goView, car:()=>car, THREE,
+  snap: async (w, h)=>{ // снимок высокого разрешения для фото-макетов
+    const ow = stage.clientWidth, oh = stage.clientHeight, pr = renderer.getPixelRatio();
+    renderer.setPixelRatio(1); renderer.setSize(w, h, false); camera.aspect = w/h; camera.clearViewOffset(); camera.updateProjectionMatrix();
+    controls.update(); renderer.render(scene, camera);
+    const blob = await new Promise(r=>canvas.toBlob(r, 'image/jpeg', 0.93));
+    renderer.setPixelRatio(pr); resize(); return blob; },
+  cam: (pos, tgt)=>{ anim = null; camera.position.set(...pos); controls.target.set(...tgt); controls.update(); dirty = true; }, info:()=>({ wheelSpan, size:carSize.toArray().map(v=>+v.toFixed(2)), paint:paintMeshes.length, glass:glassMeshes.length, decals:decals.map(g=>g.userData.zone+':'+g.children.length) }) };
 renderModels(); renderSchemes();
 seg($('split'), [['diff','Разное по сторонам'],['same','Одинаково с двух сторон']], 'split');
 renderStyles(); renderZones(); renderSummary();
