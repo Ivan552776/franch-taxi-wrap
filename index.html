@@ -19,6 +19,7 @@
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 .app{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:100%;height:100dvh;min-height:0}
 .stage{position:relative;min-width:0;min-height:0;background:radial-gradient(120% 90% at 50% 35%,#2a2d30 0%,#151617 60%,#0f1011 100%)}
 #c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
@@ -70,10 +71,9 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:12.5p
 @media (max-width: 860px){
   .app{grid-template-columns:minmax(0,1fr);grid-template-rows:min(56vh,500px) minmax(0,1fr);grid-template-rows:min(54svh,500px) minmax(0,1fr)}
   .panel{border-left:0;border-top:1px solid var(--line)}
-  .views{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding-bottom:2px}
+  .views{flex-wrap:wrap;justify-content:center;gap:5px}
   .views::-webkit-scrollbar{display:none}
-  .views{-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent)}
-  .views button{padding:8px 11px;font-size:12px;flex:0 0 auto}
+  .views button{padding:6px 10px;font-size:12px;min-height:40px;flex:0 0 auto}
 }
 @media (max-width:860px) and (orientation:landscape) and (max-height:500px){
   .app{grid-template-columns:minmax(0,1fr) min(340px,45vw);grid-template-rows:100%}
@@ -138,11 +138,13 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:12.5p
         <ul>
           <li>Цифры дохода в рекламе нужно подтверждать расчётом; сноска на кузове должна читаться (ст. 5 ФЗ «О рекламе»). Поэтому основные варианты — без цифр, расчёт по QR. Вариант с цифрой помечен.</li>
           <li>Водители и курьеры — самозанятые: пишем «доход», «подключение», без «работа», «зарплата», «смена».</li>
-          <li>«Франшиза без вложений» → «без паушального взноса»: машины (лизинг) франчу всё равно нужны, а паушального взноса по концессии нет (п. 4.2).</li>
-          <li>«Доход не ограничен» → «вознаграждение за каждого, кого приведёшь»: реферальные выплаты — право сети (Прил. 3 к концессии, п. 5.4).</li>
+          <li>«Франшиза без вложений» → «без вступительного взноса»: машины (лизинг) франчу всё равно нужны, а вступительного (паушального) взноса по концессии нет (п. 4.2).</li>
+          <li>Агентам: не «доход не ограничен» и не «за каждого», а процент от дохода приведённых — так в договоре (Прил. 3 к концессии, пп. 2.2, 5.4: 1% от дохода, выплаты — право сети).</li>
           <li>Никакой символики Яндекса. «Вызвать такси» убрано: QR ведёт на сайт франшизы.</li>
           <li>Такси с цветографической схемой: реклама не закрывает шашки и обязательные элементы. Во фрахте символики такси нет.</li>
-          <li>Оклейка частичная (двери, стекло, капот) — менять документы на машину не нужно. Заднее стекло — перфоплёнка.</li>
+          <li>Оклейка частичная (двери, стекло, капот) — менять документы на машину не нужно. Заднее стекло — перфоплёнка: допустима при двух наружных зеркалах.</li>
+          <li>Реклама на машине франча или лизинговой — только с согласия собственника (ст. 20 ФЗ «О рекламе»); лизинг обычно разрешает.</li>
+          <li>Латиница «FRANCH TAXI»: с 01.03.2026 иностранные слова в информации для потребителей допустимы как зарегистрированный товарный знак — проверить регистрацию; иначе добавить «ФРАНЧ ТАКСИ».</li>
         </ul>
       </details>
     </div>
@@ -154,7 +156,7 @@ details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:12.5p
 
 <script src="vendor/qrcode/qrcode.js"></script>
 <script type="importmap">
-{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}
+{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/","three-mesh-bvh":"./vendor/three-mesh-bvh/index.module.js"}}
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -163,6 +165,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree; THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree; THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 /* ---------------- Данные ---------------- */
 const MODELS = [
@@ -171,18 +175,52 @@ const MODELS = [
   { id:'camry',    name:'Toyota Camry',     kind:'седан',     L:4.89, file:'models/camry.glb',    author:'ItsDiyor', url:'https://sketchfab.com/3d-models/toyota-camry-2020-236a5a6e2fa6420fbdf641f4800cd544', lic:'CC BY 4.0' },
   { id:'arrizo',   name:'Chery Arrizo 6 Pro',kind:'седан',    L:4.69, file:'models/arrizo.glb',   author:'GARAGISTA', url:'https://sketchfab.com/3d-models/chery-arrizo-6-pro-2020-2057d2e2db3e4cd397c223904504df83', lic:'CC BY 4.0' },
   { id:'accent',   name:'Hyundai Solaris (Accent)', kind:'седан', L:4.37, file:'models/accent.glb', author:'Dave Love SketchFab', url:'https://sketchfab.com/3d-models/2013-hyundai-accent-8270bf067a5247f687b2d38b3b1eae39', lic:'CC BY 4.0' },
-  { id:'kia_rio',  name:'Kia Rio',          kind:'седан',     L:4.40, file:'models/kia_rio.glb',  author:'tonielpro520', url:'https://sketchfab.com/3d-models/2021-kia-rio-82803d9c4afb4cf2867ef364d31e6528', lic:'CC BY 4.0' },
+  { id:'kia_rio',  name:'Kia Rio',          kind:'хэтчбек',     L:4.40, file:'models/kia_rio.glb',  author:'tonielpro520', url:'https://sketchfab.com/3d-models/2021-kia-rio-82803d9c4afb4cf2867ef364d31e6528', lic:'CC BY 4.0' },
 ];
 
 /* Настройка каждой модели: поворот, какие материалы — кузов/стекло и т.д. Подбирается по виду. */
 const CFG = {
-  jolion:  { front:-1, hide:/mat_|invisible|plate/i },
-  tiggo7:  { front:-1, keepOther:true, map:o=>{ const n=(o.material&&o.material.name)||''; if(/Color_B07/.test(n)) return 'paint'; if(/Color_B08/.test(n)) return 'red'; if(/Translucent/.test(n)) return 'glass'; return null; } },
-  camry:   { front:+1, rearGlass:/^Index_0_2$/ },
-  arrizo:  { front:+1, keepOther:true, map:o=>{ const n=(o.material&&o.material.name)||''; if(/Translucent/.test(n)) return 'glass'; if(/mirror_CX/.test(n)) return 'paint'; return null; }, rearGlass:/^vivace$/ },
-  accent:  { front:+1, keepOther:true },
-  kia_rio: { front:+1, keepOther:true, hide:/License_Plate/i, map:o=>{ const n=(o.material&&o.material.name)||''; if(/Hatchback_Steel_Gray/.test(n)) return 'paint'; if(/WindowsTrims/.test(n)) return 'black'; return null; } },
+  jolion:  { front:-1, hide:/mat_|invisible|plate/i,
+    map:o=>{ const n=(o.material&&o.material.name)||'';
+      if (/turn_glass/.test(n)) return 'amber';
+      if (/logo/.test(n)) return 'chrome';
+      return null; } },
+  tiggo7:  { front:-1, keepOther:true, rearGlass:/^Translucent/,
+    map:o=>{ const n=(o.material&&o.material.name)||'';
+      if (/^Color_B07$/.test(n)) return 'paint';
+      if (/^Color_B08$/.test(n)) return 'red';
+      if (/^Translucent/.test(n)) return 'keep';
+      if (/^Color_M0[01]$/.test(n)) return 'chrome';
+      return null; } },
+  camry:   { front:+1, hide:/metal_white/, rearGlass:/^Index_0_2$/ },
+  arrizo:  { front:+1, keepOther:true, rearGlass:/^vivace$|^Translucent_Glass_Gray$/,
+    map:o=>{ const n=(o.material&&o.material.name)||'';
+      if (/^mirror_CX$/.test(n)) return 'paint';
+      if (/^Translucent_Glass_Dark_Green$/.test(n)) return 'red';
+      if (/^Translucent_Glass_(Gray|Sky_Reflection)$/.test(n)) return 'keep';
+      return null; } },
+  accent:  { front:+1, keepOther:true,
+    map:o=>{ const n=(o.material&&o.material.name)||'';
+      if (/^body$/.test(n)) return 'paint';
+      if (/^vehicle_vehglass\.001$/.test(n)) return 'glass';
+      if (/^vehicle_vehglass$|^vehicle_lightsemissive\.006$/.test(n)) return 'red';
+      if (/^glass$|^vehicle_vehglass\.003$/.test(n)) return 'keep';
+      if (/^vehicle_tire$/.test(n)) return 'black';
+      return null; } },
+  kia_rio: { front:+1, keepOther:true, hide:/License_Plate|Color_M02/i,
+    map:o=>{ const n=((o.material&&o.material.name)||'').replace('M_2021_Kia_Rio_Hatchback_','');
+      if (/^Steel_Gray$/.test(n)) return 'paint';
+      if (/^Windows$/.test(n)) return 'glass';
+      if (/^(HeadLightsGlass|HeadLightsBase|DRLs)$/.test(n)) return 'light';
+      if (/^(DarkRed|Red1|Reflectors|BrakeLights(Glass|Base|Main)|Default_Material)$/.test(n)) return 'red';
+      if (/^Signal1$/.test(n)) return 'amber';
+      if (/^(Chrome1|Badges|BadgesECO|Mirrors)$|Logo/.test(n)) return 'chrome';
+      if (/^(Rims[12]|BrakeRotors1?|Calipers)$/.test(n)) return 'rim';
+      if (/^Tires$/.test(n)) return 'tire';
+      if (/^(WindowsTrims|Grille[12]|Black1|BlackTrims1|Interior|UnderCarrier)$/.test(n)) return 'black';
+      return null; } },
 };
+
 
 const SCHEMES = [
   { id:'msk',  name:'Такси · Москва',       sub:'жёлтый кузов, шашки', paint:0xf7c800, taxi:true,
@@ -205,42 +243,42 @@ const SITE = 'franch-taxi.ru';
 const ZONES = [
   { id:'left', tab:'Левый борт', who:'Франчайзи — открыть свой парк', utm:'left',
     vars:[
-      { t:'Открой свой таксопарк', s:'Франшиза FRANCH TAXI без паушального взноса', c:'Условия — по QR', ok:true,
-        why:'Главный смысл Владимира — открытие парка. «Без вложений» заменено на точное «без паушального взноса» (концессия п. 4.2).' },
-      { t:'Свой таксопарк с FRANCH TAXI', s:'CRM, обучение и поддержка сети с первого дня', c:SITE, ok:true,
-        why:'Без цифр и обещаний — говорим, что получает франч.' },
-      { t:'Открой свой таксопарк', s:'Прибыль до 1 млн ₽ в месяц*', c:'*пример расчёта для парка, не гарантия — по QR', ok:false,
-        why:'Как в черновике, но цифру нужно подтвердить расчётом, а сноска должна читаться. Ставить только с готовым расчётом на сайте.' },
+      { t:'Открой свой таксопарк', s:'Франшиза без вступительного взноса', c:'Условия — по QR', ok:true,
+        why:'Главный смысл Владимира — открытие парка. Вместо «без вложений» — точное «без вступительного взноса»: так в концессии (п. 4.2), и понятнее, чем «паушальный».' },
+      { t:'Открой таксопарк в нашей сети', s:'CRM, методички и поддержка сети', c:'franch-taxi.ru', ok:true,
+        why:'Что получает франч — ровно как в договоре (п. 5.1): доступ к CRM, методические материалы, поддержка. Без обещаний и сроков.' },
+      { t:'Открой свой таксопарк', s:'Прибыль до 1 млн ₽ в месяц*', c:'*пример для парка после всех расходов, не гарантия', ok:false,
+        why:'Как в черновике. Цифру нужно подтвердить расчётом, а сноска на двери читается только вблизи — на кузов лучше не ставить, только на листовку или сайт.' },
     ]},
   { id:'right', tab:'Правый борт', who:'Водители и курьеры', utm:'right',
     vars:[
-      { t:'Водителям и курьерам', s:'Такси на своём или нашем авто · Доставка еды и посылок', c:'Подключение — по QR', ok:true,
-        why:'«Работа» заменена на «подключение»: водители и курьеры — самозанятые. Яндекса нет.' },
-      { t:'Доход за рулём и в доставке', s:'Таксист: своё или наше авто · Курьер: пешком или на авто', c:SITE, ok:true,
-        why:'Слово «доход» вместо «работа» — как согласовал Владимир 18.11.' },
-      { t:'Доход водителя до 260 000 ₽/мес*', s:'Своё или наше авто · Курьерам — доставка', c:'*пример расчёта, не гарантия — по QR', ok:false,
-        why:'Цифра из черновика. Нужен подтверждённый расчёт, на который ссылаемся; без него — риск недостоверной рекламы.' },
+      { t:'Доход водителям и курьерам', s:'Такси и доставка · своё авто или авто парка', c:'Подключение — по QR', ok:true,
+        why:'«Доход» вместо «работа» — как согласовал Владимир 18.11. Заголовок сразу говорит, что предлагаем. Яндекса нет.' },
+      { t:'Таксист или курьер?', s:'Подключайся — своё авто или авто парка', c:'franch-taxi.ru', ok:true,
+        why:'Короткий вопрос-заголовок читается за секунду. Формулировка Владимира «личный или наш транспорт» сохранена.' },
+      { t:'Доход до 260 000 ₽ в месяц*', s:'Своё авто или авто парка · курьерам — доставка', c:'*выручка до вычета комиссии, аренды и топлива; не гарантия', ok:false,
+        why:'Цифра из черновика. Неясно, «грязными» или «чистыми» — нужен подтверждённый расчёт и читаемая сноска. На кузов лучше не ставить.' },
     ]},
-  { id:'rear', tab:'Заднее стекло', who:'Агенты — приводят парки и водителей', utm:'rear',
+  { id:'rear', tab:'Заднее стекло', who:'Агенты — приводят парки, водителей и курьеров', utm:'rear',
     vars:[
-      { t:'Стань агентом FRANCH TAXI', s:'Вознаграждение за каждого, кого приведёшь', c:'', ok:true,
-        why:'Агентов просил указать Владимир. «Доход не ограничен» заменено: выплаты — право сети (Прил. 3, п. 5.4).' },
-      { t:'Приводи водителей и парки', s:'Получай вознаграждение — агент FRANCH TAXI', c:'', ok:true,
-        why:'Тот же смысл, акцент на действии.' },
-      { t:'FRANCH TAXI', s:'Агентам · Водителям · Франчайзи', c:'', ok:true,
-        why:'Коротко: все три аудитории одной строкой.' },
+      { t:'Приглашаем агентов', s:'Приводи в сеть парки, водителей и курьеров', c:'Вознаграждение — условия по QR', ok:true,
+        why:'Как в черновике Владимира («Приглашаются агенты»). Сумму не обещаем: по договору это процент от дохода приведённых, и выплаты — право сети (Прил. 3, пп. 2.2, 5.4).' },
+      { t:'Стань агентом', s:'Процент от дохода тех, кого приведёшь*', c:'*по условиям программы — по QR', ok:true,
+        why:'Точно по договору: 1% от дохода приведённого (Прил. 3, п. 2.2). Оговорка про условия — п. 5.4.' },
+      { t:'FRANCH TAXI', s:'Свой парк · Водителям · Курьерам · Агентам', c:'Все условия — по QR', ok:true,
+        why:'Сзади машину разглядывают дольше всего (пробка, светофор) — поэтому здесь все аудитории сразу и QR.' },
     ]},
   { id:'hood', tab:'Капот', who:'Бренд — видно спереди', utm:'hood',
     vars:[
       { t:'FRANCH TAXI', s:SITE, c:'', ok:true, qr:false,
-        why:'Название крупно — как хотел Владимир. QR на капоте не ставим: его не отсканировать.' },
+        why:'Название крупно — как хотел Владимир. QR на капоте не ставим: с капота его не отсканировать, QR есть на бортах и сзади.' },
       { t:'FRANCH TAXI', s:'Сеть таксопарков', c:'', ok:true, qr:false,
         why:'Только бренд и что это.' },
       { t:'FRANCH TAXI', s:SITE, c:'', ok:false, qr:true,
         why:'Вариант Владимира с QR на капоте. Показан для сравнения: с капота QR почти никто не отсканирует.' },
     ]},
 ];
-const SAME = { t:'FRANCH TAXI', cols:[['Открой свой таксопарк','без паушального взноса'],['Водителям и курьерам','своё или наше авто'],['Агентам','вознаграждение за каждого']] };
+const SAME = { t:'FRANCH TAXI', cols:[['Свой таксопарк','без вступительного взноса'],['Водителям и курьерам','доход, подключение по QR'],['Агентам','процент от дохода приведённых']] };
 
 const state = { model:'jolion', scheme:'msk', style:'night', split:'diff', area:'doors', zone:'left', pick:{left:0,right:0,rear:0,hood:0} };
 try{ const sv = JSON.parse(localStorage.getItem('ft-wrap')||'{}'); const ok=(v,list)=>list.some(x=>x.id===v);
@@ -272,7 +310,8 @@ controls.maxPolarAngle = Math.PI*0.49; controls.target.set(0,0.75,0);
 
 const key = new THREE.DirectionalLight(0xffffff, 1.4); key.position.set(4,8,5); scene.add(key);
 const fill = new THREE.DirectionalLight(0xffffff, 0.5); fill.position.set(-6,4,-4); scene.add(fill);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x2a2a2a, 0.35));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x2a2a2a, 0.5));
+const fill2 = new THREE.DirectionalLight(0xffffff, 0.45); fill2.position.set(-2,5,8); scene.add(fill2);
 
 // пол с мягкой тенью
 const shadowTex = (()=>{ const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d'); const r=g.createRadialGradient(128,128,10,128,128,128); r.addColorStop(0,'rgba(0,0,0,.75)'); r.addColorStop(.55,'rgba(0,0,0,.35)'); r.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=r; g.fillRect(0,0,256,256); return new THREE.CanvasTexture(c); })();
@@ -308,7 +347,7 @@ const R = {
   paint: /body|paint|primary|kastle|lak\b|carpaint|car_paint|kuzov/i,
 };
 const MAT = {
-  glass: ()=>new THREE.MeshPhysicalMaterial({ color:0x0e1418, roughness:.06, metalness:.1, transparent:true, opacity:.88, clearcoat:1, side:THREE.DoubleSide }),
+  glass: ()=>new THREE.MeshPhysicalMaterial({ color:0x06090b, roughness:.04, metalness:.2, transparent:true, opacity:.9, clearcoat:1, envMapIntensity:.55, side:THREE.DoubleSide }),
   tire:  ()=>new THREE.MeshStandardMaterial({ color:0x161616, roughness:.9 }),
   light: ()=>new THREE.MeshPhysicalMaterial({ color:0xc9d3da, roughness:.05, metalness:.6, clearcoat:1 }),
   red:   ()=>new THREE.MeshPhysicalMaterial({ color:0x8a0a0a, roughness:.15, metalness:.1, clearcoat:1, emissive:0x3a0000 }),
@@ -356,6 +395,7 @@ async function showModel(){
     let cls = (cfg.map && cfg.map(o)) || classify(o);
     o.userData.cls = cls; o.userData.mname = (o.material&&o.material.name)||'';
     if (cls==='hide'){ toRemove.push(o); return; }
+    if (cls==='keep') return;
     const tex = o.material && (o.material.map);
     if (cls==='paint'){ o.material = paintMat; paintMeshes.push(o); }
     else if (cls==='glass'){ o.material = MATS.glass; glassMeshes.push(o); }
@@ -377,6 +417,7 @@ async function showModel(){
   root.position.x -= c.x; root.position.z -= c.z; root.position.y -= box.min.y;
   root.updateMatrixWorld(true);
   scene.add(car); car.updateMatrixWorld(true);
+  car.traverse(o=>{ if (o.isMesh && !o.geometry.boundsTree){ try{ o.geometry.computeBoundsTree(); }catch(e){} } });   // быстрые лучи
   parts = [];
   { // открывающиеся части: двери, капот, багажник — ставим шарнир по краю детали
     const groups = {};
@@ -481,7 +522,8 @@ function panelTexture(w, h, v, opts){
   for (const L of wrapLines(g, v.s, textW).slice(0,2)){ y += ss*1.05; g.fillText(L, x, y); y += ss*0.22; }
   // призыв — «кнопка»
   if (v.c){
-    const cs = Math.round(H*0.072); g.font = `700 ${cs}px ${BODY}`;
+    let cs = Math.round(H*0.072); g.font = `700 ${cs}px ${BODY}`;
+    while (g.measureText(v.c).width + cs*1.6 > textW && cs > H*0.035){ cs -= 1; g.font = `700 ${cs}px ${BODY}`; }
     const cw = Math.min(textW, g.measureText(v.c).width + cs*1.6), ch = cs*1.9;
     const cy = Math.max(y + cs*0.9, H - pad - ch);
     if (cy + ch <= H - pad*0.4){
@@ -494,7 +536,7 @@ function panelTexture(w, h, v, opts){
     const q = qrCanvas(opts.url); const tile = qrS, qx = W - pad - tile, qy = (H - tile)/2;
     g.fillStyle = '#ffffff'; roundRect(g, qx, qy, tile, tile, tile*0.08); g.fill();
     const m = tile*0.06, qs = tile - 2*m - tile*0.09; g.imageSmoothingEnabled = false; g.drawImage(q, qx + (tile - qs)/2, qy + m, qs, qs);
-    g.font = `700 ${Math.round(tile*0.065)}px ${BODY}`; g.fillStyle = '#141516'; g.textAlign = 'center'; g.fillText('Наведите камеру', qx + tile/2, qy + tile - tile*0.045); g.textAlign = 'left';
+    g.font = `700 ${Math.round(tile*0.065)}px ${BODY}`; g.fillStyle = '#141516'; g.textAlign = 'center'; g.fillText('Наведи камеру', qx + tile/2, qy + tile - tile*0.045); g.textAlign = 'left';
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.generateMipmaps = true; return t;
 }
@@ -529,7 +571,7 @@ const lamp = (()=>{ const c=document.createElement('canvas'); c.width=512; c.hei
   const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace;
   const side = new THREE.MeshStandardMaterial({ map:t, roughness:.35, emissive:0x2a2000 }), plain = new THREE.MeshStandardMaterial({ color:0xffd21a, roughness:.35, emissive:0x2a2000 });
   const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.46), [plain, plain, plain, plain, side, side]); m.visible = false; scene.add(m); return m; })();
-const ray = new THREE.Raycaster();
+const ray = new THREE.Raycaster(); ray.firstHitOnly = true;
 function hit(origin, dir, targets){ ray.set(origin, dir.clone().normalize()); const h = ray.intersectObjects(targets, false); return h[0] || null; }
 function basis(right, up, normal){ const m = new THREE.Matrix4().makeBasis(right, up, normal); return new THREE.Euler().setFromRotationMatrix(m); }
 
@@ -537,23 +579,48 @@ const decalMats = [];
 const _bb = new THREE.Box3(), _sv = new THREE.Vector3();
 function nearTargets(targets, pos, size){ const r = Math.max(size.x, size.y, size.z)*0.75; _bb.setFromCenterAndSize(pos, _sv.setScalar(r*2));
   return targets.filter(t=>{ if (!t.userData.bb) t.userData.bb = new THREE.Box3().setFromObject(t); return t.userData.bb.intersectsBox(_bb); }); }
+// вырезаем из детали только треугольники рядом с наклейкой — так проекция в десятки раз быстрее
+const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _nm = new THREE.Matrix3();
+function worldCache(t){
+  if (t.userData.wc) return t.userData.wc;
+  const g = t.geometry, P = g.attributes.position, N = g.attributes.normal; t.updateMatrixWorld(true); _nm.getNormalMatrix(t.matrixWorld);
+  const wp = new Float32Array(P.count*3), wn = new Float32Array(P.count*3);
+  for (let i = 0; i < P.count; i++){ _v.fromBufferAttribute(P, i).applyMatrix4(t.matrixWorld); wp[i*3]=_v.x; wp[i*3+1]=_v.y; wp[i*3+2]=_v.z;
+    if (N){ _n.fromBufferAttribute(N, i).applyMatrix3(_nm).normalize(); wn[i*3]=_n.x; wn[i*3+1]=_n.y; wn[i*3+2]=_n.z; } }
+  return (t.userData.wc = { wp, wn, idx: g.index ? g.index.array : null, count: g.index ? g.index.count : P.count });
+}
+const _crop = new THREE.Mesh();
+function cropMesh(t, box){
+  const { wp, wn, idx, count } = worldCache(t);
+  const outP = [], outN = [];
+  const inB = i => { const x = wp[i*3], y = wp[i*3+1], z = wp[i*3+2]; return x>=box.min.x && x<=box.max.x && y>=box.min.y && y<=box.max.y && z>=box.min.z && z<=box.max.z; };
+  for (let k = 0; k < count; k += 3){ const a = idx ? idx[k] : k, b = idx ? idx[k+1] : k+1, c = idx ? idx[k+2] : k+2;
+    if (inB(a) || inB(b) || inB(c)) for (const i of [a,b,c]){ outP.push(wp[i*3], wp[i*3+1], wp[i*3+2]); outN.push(wn[i*3], wn[i*3+1], wn[i*3+2]); } }
+  if (!outP.length) return null;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(outP, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(outN, 3));
+  _crop.geometry = g; _crop.matrixWorld.identity(); return _crop;
+}
 function addDecal(targets, pos, euler, size, tex, zone){
   const mat = new THREE.MeshStandardMaterial({ map:tex, transparent:true, depthTest:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-4, roughness:.35, metalness:0 });
   decalMats.push(mat);
   const group = new THREE.Group(); group.userData.zone = zone;
+  const r = Math.max(size.x, size.y, size.z)*0.75; const cbox = new THREE.Box3().setFromCenterAndSize(pos, new THREE.Vector3(r*2, r*2, r*2));
   for (const t of nearTargets(targets, pos, size)){
-    try{ const geo = new DecalGeometry(t, pos, euler, size); if (geo.attributes.position.count===0){ geo.dispose(); continue; }
+    try{ const cm = cropMesh(t, cbox); if (!cm) continue; const geo = new DecalGeometry(cm, pos, euler, size); cm.geometry.dispose(); if (geo.attributes.position.count===0){ geo.dispose(); continue; }
       const d = new THREE.Mesh(geo, mat); d.userData.zone = zone;
       let a = t; while (a && !parts.some(p=>p.node===a)) a = a.parent;
       if (a){ a.updateMatrixWorld(true); geo.applyMatrix4(new THREE.Matrix4().copy(a.matrixWorld).invert()); a.add(d); onParts.push(d); }
       else group.add(d);
     }catch(e){}
   }
-  scene.add(group); decals.push(group); return group;
+  group.userData.mat = mat; scene.add(group); decals.push(group); return group;
 }
 function disposeDecals(){ for (const d of onParts){ d.parent && d.parent.remove(d); d.geometry.dispose(); } onParts = []; for (const g of decals){ scene.remove(g); g.traverse(o=>{ if(o.isMesh) o.geometry.dispose(); }); } decals=[]; for (const m of decalMats){ if (m.map && !m.map.userData.shared) m.map.dispose(); m.dispose(); } decalMats.length = 0; lamp.visible = false; }
 
+const painters = {};
+function repaint(zones){ for (const z of zones){ const p = painters[z]; if (!p) continue; const old = p.mat.map; p.mat.map = p.make(); p.mat.needsUpdate = true; if (old && !old.userData.shared) old.dispose(); } dirty = true; }
 function buildDecals(){
+  for (const k in painters) delete painters[k];
   disposeDecals();
   if (!car) return;
   const sch = SCHEMES.find(s=>s.id===state.scheme);
@@ -564,9 +631,9 @@ function buildDecals(){
   const doorX0 = state.area==='doors' ? -L*0.20 : -L*0.36;
   const doorX1 = state.area==='doors' ?  L*0.17 :  L*0.30;
   const cx = (doorX0+doorX1)/2, w = doorX1-doorX0;
-  let yLo = H*0.24, yHi = yBelt - H*0.05;
-  if (sch.taxi) yHi -= H*0.10;
-  if (sch.stripes) yLo = H*0.34;
+  let yLo = H*0.25, yHi = yBelt - H*0.14;
+  if (sch.taxi) yHi = yBelt - H*0.17;
+  if (sch.stripes) yLo = H*0.30;
   const hgt = (yHi - yLo); const cy = (yLo+yHi)/2;
   for (const side of ['right','left']){
     const sign = side==='right' ? 1 : -1;      // правый борт = +Z
@@ -578,18 +645,18 @@ function buildDecals(){
     const e = basis(right, up, normal);
     // символика такси
     if (sch.taxi){
-      const bx0 = -L*0.40, bx1 = L*0.30, bcx = (bx0+bx1)/2, bw = bx1-bx0;
-      const band = new THREE.Vector3(bcx, yBelt - H*0.085, z);
-      addDecal(paintMeshes, band, e, new THREE.Vector3(bw, H*0.11, W*0.2), checkerTexture(false), 'taxi');
-      if (sch.stripes){ addDecal(paintMeshes, new THREE.Vector3(bcx, H*0.285, z), e, new THREE.Vector3(bw, H*0.055, W*0.2), stripeTex('#ffd21a'), 'taxi');
-                        addDecal(paintMeshes, new THREE.Vector3(bcx, H*0.235, z), e, new THREE.Vector3(bw, H*0.03, W*0.2), stripeTex('#8f9397'), 'taxi'); }
+      const bx0 = -L*0.38, bx1 = L*0.22, bcx = (bx0+bx1)/2, bw = bx1-bx0;
+      const band = new THREE.Vector3(bcx, yBelt - H*0.10, z);
+      addDecal(paintMeshes, band, e, new THREE.Vector3(bw, H*0.10, W*0.12), checkerTexture(false), 'taxi');
+      if (sch.stripes){ addDecal(paintMeshes, new THREE.Vector3(bcx, H*0.27, z), e, new THREE.Vector3(bw, H*0.045, W*0.12), stripeTex('#ffd21a'), 'taxi');
+                        addDecal(paintMeshes, new THREE.Vector3(bcx, H*0.235, z), e, new THREE.Vector3(bw, H*0.025, W*0.12), stripeTex('#8f9397'), 'taxi'); }
     }
     const zone = side==='right' ? 'right' : 'left';
     const url = `https://${SITE}/?utm_source=car&utm_content=${zone}`;
-    let tex;
-    if (state.split==='same') tex = sameTexture(w, hgt, `https://${SITE}/?utm_source=car&utm_content=${zone}-all`);
-    else { const Z = ZONES.find(z=>z.id===zone); tex = panelTexture(w, hgt, Z.vars[state.pick[zone]], { url, onDark: sch.paint < 0x999999 }); }
-    addDecal(skinMeshes.length?skinMeshes:paintMeshes, pos, e, new THREE.Vector3(w, hgt, W*0.22), tex, zone);
+    const make = ()=> state.split==='same' ? sameTexture(w, hgt, `https://${SITE}/?utm_source=car&utm_content=${zone}-all`)
+      : panelTexture(w, hgt, ZONES.find(z=>z.id===zone).vars[state.pick[zone]], { url, onDark: SCHEMES.find(s=>s.id===state.scheme).paint < 0x999999 });
+    const g = addDecal(skinMeshes.length?skinMeshes:paintMeshes, pos, e, new THREE.Vector3(w, hgt, W*0.16), make(), zone);
+    painters[zone] = { mat:g.userData.mat, make };
   }
   // заднее стекло (перфоплёнка)
   {
@@ -597,7 +664,11 @@ function buildDecals(){
     const targets = glassMeshes.concat(extra).length ? glassMeshes.concat(extra) : paintMeshes;
     // меряем стекло: где по высоте и ширине луч сзади попадает в стекло
     const hitsY = [];
-    for (let f = 0.45; f <= 1.0; f += 0.01){ const r = hit(new THREE.Vector3(-L*1.5, H*f, 0), new THREE.Vector3(1,0,0), targets); if (r && r.point.x < -L*0.15) hitsY.push(r); }
+    const tset = new Set(targets);
+    const rearBox = new THREE.Box3(new THREE.Vector3(-L, H*0.4, -W), new THREE.Vector3(-L*0.1, H*1.1, W));
+    const rearMeshes = []; car.traverse(o=>{ if (o.isMesh){ if (!o.userData.bb) o.userData.bb = new THREE.Box3().setFromObject(o); if (o.userData.bb.intersectsBox(rearBox)) rearMeshes.push(o); } });
+    const firstHit = (o, d)=>{ ray.set(o, d); const hs = ray.intersectObjects(rearMeshes, false); return hs.length && tset.has(hs[0].object) ? hs[0] : null; };   // стекло должно быть видно, а не за кузовом
+    for (let f = 0.45; f <= 1.0; f += 0.015){ const r = firstHit(new THREE.Vector3(-L*1.5, H*f, 0), new THREE.Vector3(1,0,0)); if (r && r.point.x < -L*0.15) hitsY.push(r); }
     if (hitsY.length >= 3){
       // самый длинный непрерывный участок стекла
       let best = [], cur = [];
@@ -606,7 +677,7 @@ function buildDecals(){
       const bot = best[0].point, top = best[best.length-1].point, mid = best[Math.floor(best.length/2)];
       const slope = bot.distanceTo(top);
       const cy = mid.point.y;
-      let zMax = 0; for (let zz = 0.02; zz < W/2; zz += 0.02){ const r = hit(new THREE.Vector3(-L*1.5, cy, zz), new THREE.Vector3(1,0,0), targets); if (r && Math.abs(r.point.x - mid.point.x) < 0.25) zMax = zz; else if (zz > 0.3) break; }
+      let zMax = 0; for (let zz = 0.03; zz < W/2; zz += 0.03){ const r = firstHit(new THREE.Vector3(-L*1.5, cy, zz), new THREE.Vector3(1,0,0)); if (r && Math.abs(r.point.x - mid.point.x) < 0.25) zMax = zz; else if (zz > 0.3) break; }
       const n = mid.face ? mid.face.normal.clone().transformDirection(mid.object.matrixWorld) : new THREE.Vector3(-1,0,0);
       if (n.x > 0) n.negate(); n.z = 0; n.normalize();
       const right = new THREE.Vector3(0,0,1); const up = new THREE.Vector3().crossVectors(n, right).normalize(); if (up.y < 0) up.negate();
@@ -614,12 +685,20 @@ function buildDecals(){
       const center = bot.clone().add(top).multiplyScalar(0.5);
       const Z = ZONES.find(z=>z.id==='rear'); const v = Z.vars[state.pick.rear];
       const ww = Math.max(0.6, zMax*2*0.86), hh = Math.min(slope*0.78, ww*0.42);
-      addDecal(targets, center, e, new THREE.Vector3(ww, hh, 0.35), panelTexture(ww, hh, v, { url:`https://${SITE}/?utm_source=car&utm_content=rear`, onDark:true, glass:true }), 'rear');
+      const make = ()=> panelTexture(ww, hh, ZONES.find(z=>z.id==='rear').vars[state.pick.rear], { url:`https://${SITE}/?utm_source=car&utm_content=rear`, onDark:true, glass:true });
+      const g = addDecal(targets, center, e, new THREE.Vector3(ww, hh, 0.35), make(), 'rear'); painters.rear = { mat:g.userData.mat, make };
     }
   }
   // капот
   {
-    const hx = L*0.33;
+    // ищем капот: от переднего края назад до лобового стекла
+    let xFront = null, xGlass = null;
+    const frontBox = new THREE.Box3(new THREE.Vector3(-L*0.15, H*0.3, -0.3), new THREE.Vector3(L, H*1.2, 0.3)); const frontMeshes = [];
+    car.traverse(o=>{ if (o.isMesh){ if (!o.userData.bb) o.userData.bb = new THREE.Box3().setFromObject(o); if (o.userData.bb.intersectsBox(frontBox)) frontMeshes.push(o); } });
+    for (let x = L*0.5; x > -L*0.1; x -= 0.025){ ray.set(new THREE.Vector3(x, H*3, 0), new THREE.Vector3(0,-1,0)); const hs = ray.intersectObjects(frontMeshes, false); const f = hs[0]; if (!f) continue;
+      const cls = f.object.userData.cls; if (cls==='paint' && xFront===null && f.point.y > H*0.5) xFront = x; if (xFront!==null && (cls==='glass' || f.point.y > H*0.78)){ xGlass = x; break; } }
+    const hoodLen = (xFront!==null && xGlass!==null) ? xFront - xGlass : L*0.25;
+    const hx = (xFront!==null && xGlass!==null) ? xGlass + hoodLen*0.52 : L*0.33;
     const h = hit(new THREE.Vector3(hx, H*3, 0), new THREE.Vector3(0,-1,0), paintMeshes);
     if (h){
       const n = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0,1,0);
@@ -627,8 +706,9 @@ function buildDecals(){
       const right = new THREE.Vector3(0,0,-1); const up = new THREE.Vector3().crossVectors(n, right).normalize(); if (up.x > 0) up.negate();
       const e = basis(right, up, n);
       const Z = ZONES.find(z=>z.id==='hood'); const v = Z.vars[state.pick.hood];
-      const ww = W*0.62, hh = L*0.13;
-      addDecal(paintMeshes, h.point, e, new THREE.Vector3(ww, hh, 0.4), panelTexture(ww, hh, { t:v.t, s:v.s, c:'' }, { url:`https://${SITE}/?utm_source=car&utm_content=hood`, qr:v.qr, onDark: sch.paint < 0x999999 }), 'hood');
+      const ww = W*0.6, hh = Math.min(L*0.13, hoodLen*0.6);
+      const make = ()=>{ const vv = ZONES.find(z=>z.id==='hood').vars[state.pick.hood]; return panelTexture(ww, hh, { t:vv.t, s:vv.s, c:'' }, { url:`https://${SITE}/?utm_source=car&utm_content=hood`, qr:vv.qr, onDark: SCHEMES.find(s=>s.id===state.scheme).paint < 0x999999 }); };
+      const g = addDecal(paintMeshes, h.point, e, new THREE.Vector3(ww, hh, 0.4), make(), 'hood'); painters.hood = { mat:g.userData.mat, make };
     }
   }
   // фонарь такси
@@ -645,8 +725,12 @@ function stripeTex(color){ if (sharedTex[color]) return sharedTex[color]; const 
 /* ---------------- Камера ---------------- */
 let anim = null; let dirty = true;
 function goView(v){
-  const L = carSize.x||4.5, H = carSize.y||1.6; const asp = camera.aspect||1.4; const d = Math.max(L,3)*1.55*Math.max(0.92, 0.95/asp);
-  const P = { three:[d*0.8,H*1.2,d*0.85], left:[0.01,H*0.75,-d*1.05], right:[0.01,H*0.75,d*1.05], rear:[-d*1.05,H*1.05,0.01], hood:[d*0.75,H*2.4,0.01] }[v];
+  const L = carSize.x||4.5, H = carSize.y||1.6; const asp = camera.aspect||1.4;
+  const vt = Math.tan(THREE.MathUtils.degToRad(camera.fov)/2), ht = vt*asp;
+  const fitSide = (L*1.06/2)/ht + (carSize.z||2)/2, fitTop = (H*1.6/2)/vt;
+  const d = Math.max(fitSide, fitTop, 3.2);
+  const dr = Math.max(((carSize.z||2)*1.25/2)/ht + L/2, fitTop, 3.2);
+  const P = { three:[d*0.78,H*1.15,d*0.82], left:[0.01,H*0.62,-d], right:[0.01,H*0.62,d], rear:[-dr,H*1.05,0.01], hood:[dr*0.62,H*2.6,0.01] }[v];
   if (!P) return;
   const from = camera.position.clone(), to = new THREE.Vector3(...P); const t0 = performance.now(); const dur = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 650;
   anim = (now)=>{ const k = Math.min(1,(now-t0)/dur); const e = k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; camera.position.lerpVectors(from,to,e); if(k>=1) anim=null; };
@@ -692,17 +776,17 @@ function chip(label, sub, pressed, on){ const b=document.createElement('button')
 function renderModels(){ const el=$('models'); el.replaceChildren(...MODELS.map(m=>chip(m.name, m.kind, m.id===state.model, ()=>{ if (m.id===state.model) return; state.model=m.id; save(); renderModels(); showModel(); renderSummary(); }))); }
 function renderSchemes(){ const el=$('schemes'); el.replaceChildren(...SCHEMES.map(s=>chip(s.name, s.sub, s.id===state.scheme, ()=>{ state.scheme=s.id; save(); renderSchemes(); if(paintMat) paintMat.color.setHex(s.paint); scheduleDecals(); renderSummary(); })));
   $('schemeNote').textContent = SCHEMES.find(s=>s.id===state.scheme).note; }
-function seg(el, items, key){ el.replaceChildren(...items.map(([v,l])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=l; b.setAttribute('aria-pressed', String(state[key]===v)); b.addEventListener('click',()=>{ state[key]=v; save(); seg(el,items,key); scheduleDecals(); renderSummary(); renderZones(); }); return b; })); }
+function seg(el, items, key){ el.replaceChildren(...items.map(([v,l])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=l; b.setAttribute('aria-pressed', String(state[key]===v)); b.addEventListener('click',()=>{ state[key]=v; save(); seg(el,items,key); if (key==='split') repaint(['left','right']); else scheduleDecals(); renderSummary(); renderZones(); }); return b; })); }
 function renderStyles(){ const el=$('styles'); el.replaceChildren(...STYLES.map(s=>{ const b=document.createElement('button'); b.type='button'; b.className='sw'; b.setAttribute('aria-pressed', String(s.id===state.style));
   b.innerHTML = `<span class="p" style="background:${s.bg||'repeating-linear-gradient(45deg,#f3f3f1 0 8px,#e6e6e3 8px 16px)'};border:1px solid #333;display:block;position:relative"><span style="position:absolute;left:8px;top:8px;bottom:8px;width:4px;background:${s.acc};border-radius:2px"></span><span style="position:absolute;left:18px;top:9px;width:55%;height:6px;background:${s.fg};border-radius:3px"></span><span style="position:absolute;left:18px;top:20px;width:38%;height:4px;background:${s.fg};opacity:.6;border-radius:2px"></span></span>${s.name}`;
-  b.addEventListener('click',()=>{ state.style=s.id; save(); renderStyles(); scheduleDecals(); renderSummary(); }); return b; })); }
+  b.addEventListener('click',()=>{ state.style=s.id; save(); renderStyles(); repaint(['left','right','rear','hood']); renderSummary(); }); return b; })); }
 function renderZones(){
   const tabs = $('zoneTabs'); tabs.replaceChildren(...ZONES.map(z=>{ const b=document.createElement('button'); b.type='button'; b.className='zone-tab'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(z.id===state.zone)); b.innerHTML = `${z.tab}<small>вариант ${state.pick[z.id]+1}</small>`; b.addEventListener('click',()=>{ state.zone=z.id; save(); renderZones(); goView(z.id==='left'?'left':z.id==='right'?'right':z.id==='rear'?'rear':'hood'); }); return b; }));
   const Z = ZONES.find(z=>z.id===state.zone);
   $('zoneWho').textContent = (state.split==='same' && (Z.id==='left'||Z.id==='right')) ? 'Сейчас режим «одинаково с двух сторон» — на бортах общий текст для всех. Переключите «разное по сторонам», чтобы выбрать вариант.' : 'Для кого: ' + Z.who;
   $('vars').replaceChildren(...Z.vars.map((v,i)=>{ const b=document.createElement('button'); b.type='button'; b.className='var'; b.setAttribute('aria-pressed', String(state.pick[Z.id]===i));
     b.innerHTML = `<span class="badge ${v.ok?'ok':'warn'}">${v.ok?'Можно ставить':'Нужна проверка'}</span><span class="t">${v.t}</span><span class="s">${v.s}${v.c?' · '+v.c:''}</span><span class="why">${v.why}</span>`;
-    b.addEventListener('click',()=>{ state.pick[Z.id]=i; save(); renderZones(); scheduleDecals(); renderSummary(); }); return b; }));
+    b.addEventListener('click',()=>{ state.pick[Z.id]=i; save(); renderZones(); repaint([Z.id]); renderSummary(); }); return b; }));
 }
 function summaryText(){
   const m = MODELS.find(x=>x.id===state.model), s = SCHEMES.find(x=>x.id===state.scheme), st = STYLES.find(x=>x.id===state.style);
@@ -717,7 +801,7 @@ function selectSummary(){ const r=document.createRange(); r.selectNodeContents($
 function renderCredits(){ const m = MODELS.find(x=>x.id===state.model);
   $('credits').innerHTML = `3D-модель «${m.name}»: автор ${m.author}, <a href="${m.url}" target="_blank" rel="noopener">Sketchfab</a>, лицензия ${m.lic}. Модель упрощена и перекрашена для макета. QR ведут на ${SITE} (в рабочих файлах — личный QR франча).`; }
 
-window.__ft = { state, showModel, buildDecals, goView, info:()=>({ size:carSize.toArray().map(v=>+v.toFixed(2)), paint:paintMeshes.length, glass:glassMeshes.length, decals:decals.map(g=>g.userData.zone+':'+g.children.length) }) };
+window.__ft = { state, showModel, buildDecals, repaint, goView, car:()=>car, THREE, info:()=>({ size:carSize.toArray().map(v=>+v.toFixed(2)), paint:paintMeshes.length, glass:glassMeshes.length, decals:decals.map(g=>g.userData.zone+':'+g.children.length) }) };
 renderModels(); renderSchemes();
 seg($('split'), [['diff','Разное по сторонам'],['same','Одинаково с двух сторон']], 'split');
 seg($('area'), [['doors','На двери'],['full','Во весь борт']], 'area');
@@ -725,7 +809,7 @@ renderStyles(); renderZones(); renderSummary();
 const SAMPLE = 'АаБбВвЖжЯяЁё FRANCH ₽0';
 const fontsReady = document.fonts ? Promise.race([Promise.all(['800 40px Unbounded','600 20px Unbounded','600 20px Manrope','700 20px Manrope','800 20px Manrope'].map(f=>document.fonts.load(f, SAMPLE))), new Promise(r=>setTimeout(r, 4000))]).catch(()=>{}) : Promise.resolve();
 let fontsDone = false;
-fontsReady.then(()=>{ fontsDone = true; if (car) buildDecals(); });
+fontsReady.then(()=>{ fontsDone = true; if (car) repaint(['left','right','rear','hood']); });
 showModel().then(()=>goView('three'));
 canvas.addEventListener('webglcontextlost', e=>{ e.preventDefault(); const ld=$('loading'); ld.textContent='Графика перезапускается… если не появится — обновите страницу'; ld.hidden=false; });
 canvas.addEventListener('webglcontextrestored', ()=>{ scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture; buildDecals(); $('loading').hidden = true; dirty = true; });
