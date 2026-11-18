@@ -336,7 +336,7 @@ const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
 const gltfP = {}, lru = [];
 function disposeGLTF(g){ g.scene.traverse(o=>{ if (o.isMesh){ o.geometry.dispose(); [].concat(o.material).forEach(m=>{ for (const k in m){ if (m[k] && m[k].isTexture) m[k].dispose(); } m.dispose(); }); } }); }
 function loadGLTF(id){
-  if (!gltfP[id]) gltfP[id] = loader.loadAsync(MODELS.find(x=>x.id===id).file).catch(e=>{ delete gltfP[id]; throw e; });
+  if (!gltfP[id]) gltfP[id] = loader.loadAsync(MODELS.find(x=>x.id===id).file, ev=>{ if (id===state.model && ev.total){ const ld = document.getElementById('loading'); if (!ld.hidden) ld.textContent = `Загружаю модель… ${Math.round(ev.loaded/ev.total*100)}%`; } }).catch(e=>{ delete gltfP[id]; throw e; });
   const i = lru.indexOf(id); if (i>=0) lru.splice(i,1); lru.unshift(id);
   while (lru.length > 2){ let j = -1; for (let q = lru.length-1; q >= 0; q--) if (lru[q]!==id && lru[q]!==shownId){ j = q; break; } if (j < 0) break;
     const [old] = lru.splice(j,1); const pr = gltfP[old]; delete gltfP[old]; if (pr) pr.then(disposeGLTF).catch(()=>{}); }
@@ -1068,7 +1068,11 @@ const SAMPLE = 'АаБбВвЖжЯяЁё FRANCH ₽0';
 const fontsReady = document.fonts ? Promise.race([Promise.all(['400 40px "Russo One"','800 40px Unbounded','600 20px Unbounded','600 20px Manrope','700 20px Manrope','800 20px Manrope'].map(f=>document.fonts.load(f, SAMPLE))), new Promise(r=>setTimeout(r, 4000))]).catch(()=>{}) : Promise.resolve();
 fontsReady.then(()=>{ if (car) repaint(['left','right','rear','hood']); });
 let fontT = 0; if (document.fonts) document.fonts.addEventListener('loadingdone', ()=>{ clearTimeout(fontT); fontT = setTimeout(()=>{ for (const k in sharedTex) if (k.startsWith('plate')){ sharedTex[k].dispose(); delete sharedTex[k]; } if (car) scheduleDecals(); }, 150); });
-showModel().then(()=>goView('three'));
+showModel().then(()=>{ goView('three');
+  // остальные машины тихо скачиваем заранее (в кэш браузера) — переключение почти мгновенное
+  const c = navigator.connection; if (c && (c.saveData || /2g/.test(c.effectiveType||''))) return;
+  setTimeout(async ()=>{ for (const m of MODELS){ if (m.id===state.model) continue; try { await fetch(m.file, { priority:'low' }); } catch(e){} } }, 1500);
+});
 canvas.addEventListener('webglcontextlost', e=>{ e.preventDefault(); const ld=$('loading'); ld.textContent='Графика перезапускается… Если модель не появится, обновите страницу.'; ld.hidden=false; });
 canvas.addEventListener('webglcontextrestored', ()=>{ if (scene.environment) scene.environment.dispose(); scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture; buildDecals(); $('loading').hidden = true; dirty = true; });
 </script>
