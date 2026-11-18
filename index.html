@@ -210,7 +210,7 @@ const CFG = {
       if (/^Translucent_Glass_Dark_Green$/.test(n)) return 'red';
       if (/^Translucent_Glass_(Gray|Sky_Reflection)$/.test(n)) return 'keep';
       return null; } },
-  accent:  { front:+1, keepOther:true, smooth:true, plate:{ rear:0.92 },
+  accent:  { front:+1, keepOther:true, plate:{ rear:0.92 },
     map:o=>{ const n=(o.material&&o.material.name)||'';
       if (/^body$/.test(n)) return 'paint';
       if (/^vehicle_vehglass\.001$/.test(n)) return 'glass';
