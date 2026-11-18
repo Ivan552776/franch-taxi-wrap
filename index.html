@@ -185,7 +185,6 @@ const MODELS = [
   { id:'tiggo7',   name:'Chery Tiggo 7 Pro',kind:'кроссовер', L:4.50, file:'models/tiggo7.glb',   author:'GARAGISTA', url:'https://sketchfab.com/3d-models/chery-tiggo-7-pro-2022-128458f37a254a32aa65e98dfad56946', lic:'CC BY 4.0' },
   { id:'camry',    name:'Toyota Camry',     kind:'седан',     L:4.89, file:'models/camry.glb',    author:'ItsDiyor', url:'https://sketchfab.com/3d-models/toyota-camry-2020-236a5a6e2fa6420fbdf641f4800cd544', lic:'CC BY 4.0' },
   { id:'arrizo',   name:'Chery Arrizo 6 Pro',kind:'седан',    L:4.69, file:'models/arrizo.glb',   author:'GARAGISTA', url:'https://sketchfab.com/3d-models/chery-arrizo-6-pro-2020-2057d2e2db3e4cd397c223904504df83', lic:'CC BY 4.0' },
-  { id:'accent',   name:'Hyundai Solaris (Accent)', kind:'седан', L:4.37, file:'models/accent.glb', author:'Dave Love SketchFab', url:'https://sketchfab.com/3d-models/2013-hyundai-accent-8270bf067a5247f687b2d38b3b1eae39', lic:'CC BY 4.0' },
   { id:'kia_rio',  name:'Kia Rio',          kind:'хетчбэк',     L:4.40, file:'models/kia_rio.glb',  author:'tonielpro520', url:'https://sketchfab.com/3d-models/2021-kia-rio-82803d9c4afb4cf2867ef364d31e6528', lic:'CC BY 4.0' },
 ];
 
@@ -209,14 +208,6 @@ const CFG = {
       if (/^mirror_CX$/.test(n)) return 'paint';
       if (/^Translucent_Glass_Dark_Green$/.test(n)) return 'red';
       if (/^Translucent_Glass_(Gray|Sky_Reflection)$/.test(n)) return 'keep';
-      return null; } },
-  accent:  { front:+1, keepOther:true, plate:{ rear:0.92 },
-    map:o=>{ const n=(o.material&&o.material.name)||'';
-      if (/^body$/.test(n)) return 'paint';
-      if (/^vehicle_vehglass\.001$/.test(n)) return 'glass';
-      if (/^vehicle_vehglass$|^vehicle_lightsemissive\.006$/.test(n)) return 'red';
-      if (/^glass$|^vehicle_vehglass\.003$/.test(n)) return 'keep';
-      if (/^vehicle_tire$/.test(n)) return 'black';
       return null; } },
   kia_rio: { front:+1, keepOther:true, hide:/License_Plate|Color_M02/i,
     map:o=>{ const n=((o.material&&o.material.name)||'').replace('M_2021_Kia_Rio_Hatchback_','');
