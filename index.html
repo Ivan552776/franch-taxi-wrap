@@ -173,6 +173,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree; THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree; THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
@@ -207,7 +208,7 @@ const CFG = {
       if (/^Translucent_Glass_Dark_Green$/.test(n)) return 'red';
       if (/^Translucent_Glass_(Gray|Sky_Reflection)$/.test(n)) return 'keep';
       return null; } },
-  accent:  { front:+1, keepOther:true, plate:{ rear:0.92 },
+  accent:  { front:+1, keepOther:true, smooth:true, plate:{ rear:0.92 },
     map:o=>{ const n=(o.material&&o.material.name)||'';
       if (/^body$/.test(n)) return 'paint';
       if (/^vehicle_vehglass\.001$/.test(n)) return 'glass';
@@ -406,6 +407,7 @@ async function showModel(){
     if (cfg.hide && cfg.hide.test((o.name||'')+' '+((o.material&&o.material.name)||''))) { toRemove.push(o); return; }
     let cls = (cfg.map && cfg.map(o)) || classify(o);
     o.userData.cls = cls; o.userData.mname = (o.material&&o.material.name)||'';
+    if (cfg.smooth && cls === 'paint' && !o.geometry.userData.creased){ try { const ng = toCreasedNormals(o.geometry, Math.PI/5); ng.userData.creased = true; o.geometry = ng; } catch(e){} }
     if (cls==='hide'){ toRemove.push(o); return; }
     if (cls==='tire' || cls==='rim') wheelMeshes.push(o);
     if (cls==='keep') return;
@@ -544,7 +546,7 @@ function panelTexture(w, h, v, opts){
   const acc = (st.id === 'sun' || (yBody && !st.panel)) && !glass ? '#141516' : '#ffd21a';
   const accInk = acc === '#ffd21a' ? '#141516' : '#ffd21a';
   const brandCol = panel ? acc : ink;
-  const badge = (yBody && print) || (st.id === 'sun' && !glass);
+  const badge = print || st.id === 'sun';
   const dir = opts.side === 'left' ? -1 : 1;            // на левом борту нос машины слева
   const cut = panel && !glass ? H*0.30 : 0;             // скос плашки по ходу движения
   const gap = opts.gap || null;                         // молдинг: [верх, низ] в долях H
@@ -557,8 +559,8 @@ function panelTexture(w, h, v, opts){
       g.closePath(); g.fill(); }
     g.restore();
   }
-  const pad = H*(print ? 0.10 : glass ? 0.14 : 0.13);
-  const padX = glass ? Math.max(pad, W*0.08) : pad;     // стекло сужается к верху
+  const pad = H*(print ? 0.10 : glass ? 0.17 : 0.13);
+  const padX = glass ? Math.max(pad, W*0.11) : pad;     // стекло сужается к верху
   const withQR = opts.qr !== false;
   let qrS = withQR ? Math.min(H - pad*2, W*0.3, H*(glass ? 0.76 : print ? 0.78 : 0.7)) : 0, qy = (H - qrS)/2;
   if (gap && withQR){ const a = gap[0]*H, b = H - gap[1]*H, top = a >= b; qrS = Math.min(qrS, (top ? a : b) - H*0.06); qy = top ? (a - qrS)/2 : gap[1]*H + (b - qrS)/2; }
@@ -580,19 +582,22 @@ function panelTexture(w, h, v, opts){
   if (!isBrand && !gap) brandLine();
   const lx = isBrand ? Math.round(H*0.2)*1.3 : 0;
   const topLim = gap ? gap[0]*H - H*0.03 : Infinity;
-  let ts = Math.round(H*(panel ? 0.2 : 0.3)); let lines = [v.t]; const tW = textW - lx;
-  if (gap) ts = Math.min(ts, Math.floor((topLim - y)/0.98));
-  g.font = `${DW} ${ts}px ${DISPLAY}`;
-  while (g.measureText(v.t).width > tW && ts > H*(print ? 0.2 : 0.125)){ ts -= 2; g.font = `${DW} ${ts}px ${DISPLAY}`; }
-  if (isBrand){ while (g.measureText(v.t).width > tW && ts > H*0.06){ ts -= 2; g.font = `${DW} ${ts}px ${DISPLAY}`; } }
-  else if (g.measureText(v.t).width > tW){ ts = Math.round(H*(print ? 0.185 : 0.15)); if (gap) ts = Math.min(ts, Math.floor((topLim - y)/2.1));
-    for (;;){ g.font = `${DW} ${ts}px ${DISPLAY}`; lines = wrapLines(g, v.t, tW); if ((lines.length <= 2 && lines.every(l=>g.measureText(l).width <= tW)) || ts < H*0.06) break; ts -= 2; } }
+  const tW = textW - lx;
+  const txt = isBrand ? v.t : v.t.replace(/(^|\s)(и|в|на|для|с|к|по|о|от|из|без|а)\s/g, '$1$2\u00a0');   // предлог не висит
+  const capH = Math.round(H*(panel ? 0.24 : 0.34));
+  const room = (gap ? topLim : H - pad - H*(print ? 0.2 : 0.3)) - y;
+  const sizeFor = n => { let s = Math.max(Math.round(H*0.06), Math.min(capH, Math.floor(room/(n*0.98 + (n-1)*0.14))));
+    for (;;){ g.font = `${DW} ${s}px ${DISPLAY}`; const L = n === 1 ? [txt] : wrapLines(g, txt, tW);
+      if ((L.length <= n && L.every(l=>g.measureText(l).width <= tW)) || s < H*0.06) return { s, L }; s -= 2; } };
+  const one = sizeFor(1), two = isBrand ? one : sizeFor(2);
+  const best = (two.L.length === 2 && two.s > one.s*1.25) ? two : one;
+  let ts = best.s, lines = best.L; g.font = `${DW} ${ts}px ${DISPLAY}`;
   g.fillStyle = ink;
   if (isBrand) drawLogo(g, x, y + ts*0.02, ts*1.12, dark, badge);
   for (const L of lines){ y += ts*0.98; g.fillText(L, x + (isBrand ? ts*1.3 : 0), y); y += ts*0.14; }
   if (gap){ y = gap[1]*H + H*0.03; if (!isBrand){ brandLine(); y -= eyebrow*0.3; } }
   // подзаголовок: утверждённый текст целиком — уменьшаем кегль, но не обрезаем
-  let ss = Math.round(Math.min(H*(panel ? 0.095 : 0.11), ts*0.6));
+  let ss = Math.round(Math.min(H*(panel ? 0.095 : 0.12), ts*0.5));
   if (gap) ss = Math.min(ss, Math.floor((H - pad*0.6 - y)/1.05));
   const sw = print ? 700 : 600, maxSL = (print || gap) ? 1 : 2;
   g.font = `${sw} ${ss}px ${BODY}`;
@@ -629,7 +634,7 @@ function hoodTexture(w, h, v, opts){
   let ts = Math.round(H*0.34); g.font = `${DW} ${ts}px ${DISPLAY}`;
   while (ts*1.32 + g.measureText(v.t).width > W*0.9 && ts > H*0.12){ ts -= 2; g.font = `${DW} ${ts}px ${DISPLAY}`; }
   const total = ts*1.32 + g.measureText(v.t).width, x0 = (W - total)/2, yb = H*0.56;
-  drawLogo(g, x0, yb - ts*1.0, ts*1.1, dark, yBody);
+  drawLogo(g, x0, yb - ts*1.0, ts*1.1, dark, true);
   g.textBaseline = 'alphabetic'; g.fillStyle = ink; g.fillText(v.t, x0 + ts*1.32, yb);
   let ss = Math.round(H*0.15); g.font = `700 ${ss}px ${BODY}`; while (g.measureText(v.s).width > W*0.8 && ss > H*0.06){ ss -= 2; g.font = `700 ${ss}px ${BODY}`; }
   g.textAlign = 'center'; g.fillText(v.s, W/2, yb + ss*1.5); g.textAlign = 'left';
@@ -637,48 +642,29 @@ function hoodTexture(w, h, v, opts){
 }
 function sameTexture(w, h, url){
   const st = STYLES.find(s=>s.id===state.style);
-  const S = 1024/Math.max(w,h); const W=Math.round(w*S*1.6), H=Math.round(h*S*1.6);
-  const c = document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
-  if (st.panel){ g.fillStyle=st.bg; roundRect(g,0,0,W,H,Math.min(W,H)*.07); g.fill(); }
-  const ink = st.panel? st.fg : st.fg, sub = st.panel? st.sub : st.sub;
-  const pad = H*.1, qrS = H - pad*2;
-  g.textBaseline='alphabetic'; drawBrand(g, pad, pad + H*.15, H*.15, st.panel ? st.acc : (state.scheme==='grey' ? '#ffffff' : '#141516'), state.scheme==='grey' || st.id==='night', !st.panel && state.scheme==='msk'); g.textBaseline='top';
-  const colW = (W - pad*3 - qrS)/3; const gap = H*.09; const y0 = pad + H*.3;
-  SAME.cols.forEach((col,i)=>{ const x = pad + i*colW, cw = colW - gap; g.fillStyle=ink; const fs = fitText(g, col[0], cw, H*.11, H*.06, BODY, 800);
-    let y=y0; for (const L of wrapLines(g,col[0],cw).slice(0,2)){ g.fillText(L,x,y); y+=fs*1.15; }
-    g.font=`600 ${H*.075}px ${BODY}`; g.fillStyle=sub; y += H*.03; for (const L of wrapLines(g,col[1],cw).slice(0,3)){ g.fillText(L,x,y); y+=H*.092; } });
-  const qx=W-pad-qrS; g.fillStyle='#fff'; roundRect(g,qx-H*.02,pad-H*.02,qrS+H*.04,qrS+H*.04,H*.04); g.fill(); drawQR(g, url, qx, pad, qrS);
-  const t = new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
-}
-const sharedTex = {};
-/* Фирменная графика на весь борт: «скоростные» клинья у задней арки и сужающаяся линия вперёд.
-   Цвета — как на сайте: жёлтый #ffd21a и почти чёрный. Обязательные элементы такси не перекрываются. */
-function liveryTexture(sign, L, H, y0, y1, sch, ws){
-  const Wc = Math.min(COARSE ? 2048 : 4096, renderer.capabilities.maxTextureSize), Hc = Math.round(Wc*(y1-y0)/L);
-  const c = document.createElement('canvas'); c.width = Wc; c.height = Hc; const g = c.getContext('2d');
-  const X = x => (sign > 0 ? (x + L/2) : (L/2 - x))/L*Wc, Y = y => (y1 - y)/(y1 - y0)*Hc;
-  const poly = (pts, col)=>{ g.fillStyle = col; g.beginPath(); pts.forEach(([x,y],i)=> i ? g.lineTo(X(x),Y(y)) : g.moveTo(X(x),Y(y))); g.closePath(); g.fill(); };
-  const yellowBody = sch.id === 'msk';
-  const main = yellowBody ? '#141516' : '#ffd21a', edge = yellowBody ? '#ffd21a' : '#141516';
-  const yBelt = H*0.66;
-  const yBot = sch.stripes ? H*0.315 : H*0.11;
-  const yTop = sch.taxi ? yBelt - H*0.165 : yBelt - H*0.05;
-  const xr = ws ? ws[0] : -L*0.22;
-  const lean = (yTop - yBot)*0.5;
-  // клинья: от узких к широким, к корме
-  const widths = [0.05, 0.085, 0.13], gap = 0.06; let xf = xr + 0.30;
-  for (const w of widths){ poly([[xf - w, yBot], [xf, yBot], [xf + lean, yTop], [xf - w + lean, yTop]], main); xf -= w + gap; }
-  const xe = -L*0.43;   // заканчиваем до скругления бампера, тоже косым срезом
-  poly([[xe - lean*0.6, yBot], [xf, yBot], [xf + lean, yTop], [xe + lean*0.4, yTop]], main);
-  // тонкая контрастная кромка по переднему краю большого клина
-  const ew = 0.018; poly([[xf, yBot], [xf + ew, yBot], [xf + ew + lean, yTop], [xf + lean, yTop]], edge);
-  // сужающаяся линия вдоль порога — вперёд, к передней арке (в Подмосковье её роль играют полосы схемы)
-  if (!sch.stripes){
-    const yl = H*0.205, x0 = xr + 0.30 - 0.05, x1 = (ws ? ws[1] + 0.68 : L*0.42);
-    poly([[x0, yl - H*0.016], [x1, yl - H*0.003], [x1, yl + H*0.003], [x0, yl + H*0.016]], main);
-  }
+  const PX = Math.min(COARSE ? 2048 : 2600, renderer.capabilities.maxTextureSize) / Math.max(w, h);
+  const W = Math.round(w*PX), H = Math.round(h*PX);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const dark = st.panel ? st.id !== 'sun' : state.scheme === 'grey';
+  if (st.panel){ g.fillStyle = st.bg; g.fillRect(0, 0, W, H); }
+  const ink = dark ? '#ffffff' : '#141516', sub = dark ? '#e9e6dd' : '#141516', brandCol = st.panel ? st.acc : ink;
+  const pad = H*.1, qrS = Math.min(H - pad*2, W*.22), qx = W - pad - qrS, textW = qx - pad*2;
+  g.textBaseline = 'alphabetic';
+  let bh = Math.round(H*.26); const bw = ()=>{ g.font = `${DW} ${Math.round(bh*.9)}px ${DISPLAY}`; return bh*1.15 + g.measureText('ФРАНЧ ТАКСИ').width; };
+  while (bw() > textW && bh > H*.1) bh -= 2;
+  drawBrand(g, pad, pad + bh, bh, brandCol, dark, true);
+  const colGap = H*.06, colW = (textW - colGap*2)/3, y0 = pad + bh*1.6;
+  let ts = Math.round(H*.12); const fits = ()=>{ g.font = `800 ${ts}px ${BODY}`; return SAME.cols.every(k=>g.measureText(k[0]).width <= colW); };
+  while (!fits() && ts > H*.06) ts -= 2;
+  SAME.cols.forEach((col, i)=>{ const x = pad + i*(colW + colGap); let y = y0 + ts;
+    g.font = `800 ${ts}px ${BODY}`; g.fillStyle = ink; g.fillText(col[0], x, y);
+    let s = Math.round(H*.075); g.font = `600 ${s}px ${BODY}`;
+    while (wrapLines(g, col[1], colW).length > 2 && s > H*.045){ s -= 1; g.font = `600 ${s}px ${BODY}`; }
+    g.fillStyle = sub; for (const L of wrapLines(g, col[1], colW).slice(0, 2)){ y += s*1.25; g.fillText(L, x, y); } });
+  const qy = (H - qrS)/2; g.fillStyle = '#fff'; roundRect(g, qx, qy, qrS, qrS, qrS*.08); g.fill(); drawQR(g, url, qx + qrS*.03, qy + qrS*.03, qrS*.94);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t;
 }
+const sharedTex = {};
 function plateTexture(yellow){ const key = 'plate'+(yellow?1:0); if (sharedTex[key]) return sharedTex[key];
   const c = document.createElement('canvas'); c.width = 1040; c.height = 224; const g = c.getContext('2d');
   g.fillStyle = yellow ? '#f5c400' : '#ffffff'; roundRect(g, 0, 0, 1040, 224, 22); g.fill(); g.lineWidth = 10; g.strokeStyle = '#141516'; roundRect(g, 8, 8, 1024, 208, 16); g.stroke();
@@ -844,7 +830,8 @@ function buildDecals(){
       const e = basis(right, up, n);
       const center = bot.clone().add(top).multiplyScalar(0.5);
       const Z = ZONES.find(z=>z.id==='rear'); const v = Z.vars[state.pick.rear];
-      const ww = Math.max(0.6, zMax*2*0.96), hh = Math.min(slope*0.86, ww*0.48);
+      const onGlass = glassMeshes.concat(extra).length > 0;
+      const ww = onGlass ? Math.max(0.6, zMax*2*1.04) : Math.max(0.6, zMax*2*0.96), hh = onGlass ? slope*0.98 : Math.min(slope*0.86, ww*0.48);
       const make = ()=> panelTexture(ww, hh, ZONES.find(z=>z.id==='rear').vars[state.pick.rear], { url:`https://${SITE}/?utm_source=car_b`, onDark:true, glass:true });
       const g = addDecal(targets, center, e, new THREE.Vector3(ww, hh, 0.35), make(), 'rear'); painters.rear = { mat:g.userData.mat, make };
     }
@@ -866,7 +853,7 @@ function buildDecals(){
       const right = new THREE.Vector3(0,0,-1); const up = new THREE.Vector3().crossVectors(n, right).normalize(); if (up.x > 0) up.negate();
       const e = basis(right, up, n);
       const Z = ZONES.find(z=>z.id==='hood'); const v = Z.vars[state.pick.hood];
-      const ww = W*0.6, hh = Math.min(L*0.13, hoodLen*0.6);
+      const ww = W*0.68, hh = Math.min(L*0.15, hoodLen*0.62);
       const make = ()=>{ const vv = ZONES.find(z=>z.id==='hood').vars[state.pick.hood]; return hoodTexture(ww, hh, { t:vv.t, s:vv.s, c:'' }, { url:`https://${SITE}/?utm_source=car_h`, qr:vv.qr, onDark: SCHEMES.find(s=>s.id===state.scheme).paint < 0x666666 }); };
       const g = addDecal(paintMeshes, h.point, e, new THREE.Vector3(ww, hh, 0.4), make(), 'hood'); painters.hood = { mat:g.userData.mat, make };
     }
