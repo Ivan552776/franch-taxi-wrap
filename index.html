@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FRANCH TAXI — оклейка</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Manrope:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: 3D-сцена во всю ширину; панель выбора — справа на широком экране, снизу на телефоне. */
+:root{
+  --bg:#121314; --bg2:#1b1d1f; --panel:#17191b; --line:#2b2e31; --fg:#f2f0ea; --muted:#9a9d9f;
+  --yellow:#ffd21a; --yellow-ink:#1a1500; --ok:#46c27a; --warn:#ffb020;
+  --display:'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --body:'Manrope', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  color-scheme: dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:100%;min-height:0}
+.stage{position:relative;min-width:0;min-height:0;background:radial-gradient(120% 90% at 50% 35%,#2a2d30 0%,#151617 60%,#0f1011 100%)}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.brand{position:absolute;top:max(12px,env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;pointer-events:none}
+.brand b{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.02em}
+.brand b i{font-style:normal;color:var(--yellow)}
+.brand span{font-size:12px;color:var(--muted)}
+.views{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:calc(100% - 32px)}
+.views button,.chip,.seg button{font:600 13px/1 var(--body);color:var(--fg);background:rgba(30,32,34,.86);border:1px solid var(--line);border-radius:999px;padding:9px 13px;cursor:pointer;backdrop-filter:blur(6px)}
+.views button:hover,.chip:hover{border-color:#4a4e52}
+.views button:focus-visible,.chip:focus-visible,.seg button:focus-visible,.var:focus-visible,.zone-tab:focus-visible,.btn:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.loading{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-weight:600;color:var(--muted)}
+.loading[hidden]{display:none!important}
+.hint{position:absolute;top:max(44px,calc(env(safe-area-inset-top,0px) + 34px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));font-size:12px;line-height:1.4;color:var(--muted);pointer-events:none}
+.panel{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;min-height:0;padding-block:16px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sec{display:grid;gap:10px;padding-block:14px;border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec h3{margin:0;font:600 11px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:8px 11px}
+.chip[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--yellow);color:var(--yellow-ink);border-color:var(--yellow)}
+.chip small{display:block;font-weight:500;font-size:11px;opacity:.75;margin-top:3px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.styles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sw{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg2);cursor:pointer;color:var(--fg);font:600 12px var(--body);text-align:left;display:grid;gap:6px}
+.sw .p{height:34px;border-radius:6px}
+.sw[aria-pressed="true"]{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow) inset}
+.zone-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.zone-tab{font:700 12px/1.15 var(--body);color:var(--fg);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 6px;cursor:pointer;text-align:center}
+.zone-tab small{display:block;font-weight:500;color:var(--muted);font-size:10.5px;margin-top:3px}
+.zone-tab[aria-selected="true"]{border-color:var(--yellow);color:var(--yellow)}
+.zone-who{font-size:12.5px;color:var(--muted);margin:0}
+.vars{display:grid;gap:8px}
+.var{display:grid;gap:5px;text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;cursor:pointer;color:var(--fg);font:inherit}
+.var[aria-pressed="true"]{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow) inset}
+.var .t{font-family:var(--display);font-weight:600;font-size:13.5px;line-height:1.25}
+.var .s{font-size:12.5px;color:#cfccc4;line-height:1.35}
+.badge{justify-self:start;font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px}
+.badge.ok{background:rgba(70,194,122,.14);color:var(--ok)}
+.badge.warn{background:rgba(255,176,32,.14);color:var(--warn)}
+.why{font-size:12px;color:var(--muted);line-height:1.4}
+.summary{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.btn{font:700 14px var(--body);background:var(--yellow);color:var(--yellow-ink);border:0;border-radius:12px;padding:12px 14px;cursor:pointer}
+.note{font-size:12px;color:var(--muted);line-height:1.45;margin:0}
+details summary{cursor:pointer;font-weight:700;font-size:13px}
+details ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:12.5px;line-height:1.45;color:#d6d3cb}
+.credits{font-size:11px;color:var(--muted);line-height:1.5}
+.credits a{color:var(--muted)}
+@media (max-width: 860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:min(56vh,500px) minmax(0,1fr)}
+  .panel{border-left:0;border-top:1px solid var(--line)}
+  .views{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding-bottom:2px}
+  .views::-webkit-scrollbar{display:none}
+  .views button{padding:8px 11px;font-size:12px;flex:0 0 auto}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <div class="stage" id="stage">
+    <canvas id="c" aria-label="3D-модель машины с рекламой FRANCH TAXI"></canvas>
+    <div class="brand"><b>FRANCH <i>TAXI</i></b><span>оклейка · макет</span></div>
+    <div class="hint" id="hint">Крутите пальцем · два пальца — приблизить · тап по рекламе — выбрать зону</div>
+    <div class="loading" id="loading">Загружаю модель…</div>
+    <div class="views" role="group" aria-label="Вид">
+      <button data-view="three">3/4</button>
+      <button data-view="left">Левый борт</button>
+      <button data-view="right">Правый борт</button>
+      <button data-view="rear">Сзади</button>
+      <button data-view="hood">Капот</button>
+      <button id="spin" aria-pressed="false">Вращать</button>
+      <button id="openBtn" aria-pressed="false" hidden>Открыть двери</button>
+    </div>
+  </div>
+
+  <aside class="panel" aria-label="Настройки">
+    <div class="sec">
+      <h3>Модель машины</h3>
+      <div class="chips" id="models"></div>
+    </div>
+    <div class="sec">
+      <h3>Схема окраса</h3>
+      <div class="chips" id="schemes"></div>
+      <p class="note" id="schemeNote"></p>
+    </div>
+    <div class="sec">
+      <h3>Как делить текст по бортам</h3>
+      <div class="seg" id="split"></div>
+      <div class="seg" id="area"></div>
+    </div>
+    <div class="sec">
+      <h3>Стиль</h3>
+      <div class="styles" id="styles"></div>
+    </div>
+    <div class="sec">
+      <h3>Текст по зонам · по 3 варианта</h3>
+      <div class="zone-tabs" role="tablist" id="zoneTabs"></div>
+      <p class="zone-who" id="zoneWho"></p>
+      <div class="vars" id="vars"></div>
+    </div>
+    <div class="sec">
+      <h3>Ваш выбор</h3>
+      <div class="summary" id="summary"></div>
+      <button class="btn" id="copy">Скопировать выбор</button>
+      <p class="note" id="copied" hidden>Скопировано — вставьте в чат.</p>
+    </div>
+    <div class="sec">
+      <details>
+        <summary>Почему тексты такие (закон о рекламе)</summary>
+        <ul>
+          <li>Цифры дохода в рекламе нужно подтверждать расчётом; сноска на кузове должна читаться (ст. 5 ФЗ «О рекламе»). Поэтому основные варианты — без цифр, расчёт по QR. Вариант с цифрой помечен.</li>
+          <li>Водители и курьеры — самозанятые: пишем «доход», «подключение», без «работа», «зарплата», «смена».</li>
+          <li>«Франшиза без вложений» → «без паушального взноса»: машины (лизинг) франчу всё равно нужны, а паушального взноса по концессии нет (п. 4.2).</li>
+          <li>«Доход не ограничен» → «вознаграждение за каждого, кого приведёшь»: реферальные выплаты — право сети (Прил. 3 к концессии, п. 5.4).</li>
+          <li>Никакой символики Яндекса. «Вызвать такси» убрано: QR ведёт на сайт франшизы.</li>
+          <li>Такси с цветографической схемой: реклама не закрывает шашки и обязательные элементы. Во фрахте символики такси нет.</li>
+          <li>Оклейка частичная (двери, стекло, капот) — менять документы на машину не нужно. Заднее стекло — перфоплёнка.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="sec">
+      <p class="credits" id="credits"></p>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
+
+/* ---------------- Данные ---------------- */
+const MODELS = [
+  { id:'jolion',   name:'Haval Jolion',     kind:'кроссовер', L:4.47, file:'models/jolion.glb',   author:'zapkolenko07', url:'https://sketchfab.com/3d-models/haval-jolion-mid-poly-8389fcd1f29345608955b9392b51d23f', lic:'CC BY 4.0' },
+  { id:'tiggo7',   name:'Chery Tiggo 7 Pro',kind:'кроссовер', L:4.50, file:'models/tiggo7.glb',   author:'GARAGISTA', url:'https://sketchfab.com/3d-models/chery-tiggo-7-pro-2022-128458f37a254a32aa65e98dfad56946', lic:'CC BY 4.0' },
+  { id:'camry',    name:'Toyota Camry',     kind:'седан',     L:4.89, file:'models/camry.glb',    author:'ItsDiyor', url:'https://sketchfab.com/3d-models/toyota-camry-2020-236a5a6e2fa6420fbdf641f4800cd544', lic:'CC BY 4.0' },
+  { id:'arrizo',   name:'Chery Arrizo 6 Pro',kind:'седан',    L:4.69, file:'models/arrizo.glb',   author:'GARAGISTA', url:'https://sketchfab.com/3d-models/chery-arrizo-6-pro-2020-2057d2e2db3e4cd397c223904504df83', lic:'CC BY 4.0' },
+  { id:'accent',   name:'Hyundai Solaris (Accent)', kind:'седан', L:4.37, file:'models/accent.glb', author:'Dave Love SketchFab', url:'https://sketchfab.com/3d-models/2013-hyundai-accent-8270bf067a5247f687b2d38b3b1eae39', lic:'CC BY 4.0' },
+  { id:'kia_rio',  name:'Kia Rio',          kind:'седан',     L:4.40, file:'models/kia_rio.glb',  author:'tonielpro520', url:'https://sketchfab.com/3d-models/2021-kia-rio-82803d9c4afb4cf2867ef364d31e6528', lic:'CC BY 4.0' },
+];
+
+/* Настройка каждой модели: поворот, какие материалы — кузов/стекло и т.д. Подбирается по виду. */
+const CFG = {
+  jolion:  { front:-1, hide:/mat_|invisible|plate/i },
+  haval_f7b:{ front:+1 },
+  tiggo7:  { front:-1, keepOther:true, map:o=>{ const n=(o.material&&o.material.name)||''; if(/Color_B07/.test(n)) return 'paint'; if(/Color_B08/.test(n)) return 'red'; if(/Translucent/.test(n)) return 'glass'; return null; } },
+  camry:   { front:+1, rearGlass:/^Index_0_2$/ },
+  k5b:     { front:+1, keepOther:true },
+  kia_k5:  { front:-1, keepOther:true, map:o=>{ const n=(o.material&&o.material.name)||''; if(n==='secondary_3') return 'paint'; return null; } },
+  arrizo:  { front:+1, keepOther:true, map:o=>{ const n=(o.material&&o.material.name)||''; if(/Translucent/.test(n)) return 'glass'; if(/mirror_CX/.test(n)) return 'paint'; return null; }, rearGlass:/^vivace$/ },
+  accent:  { front:+1, keepOther:true },
+  kia_rio: { front:+1, keepOther:true, hide:/License_Plate/i, map:o=>{ const n=(o.material&&o.material.name)||''; if(/Hatchback_Steel_Gray/.test(n)) return 'paint'; if(/WindowsTrims/.test(n)) return 'black'; return null; } },
+  polo:    { front:+1, map:o=>{ const n=(o.material&&o.material.name)||''; if(/^far_f/.test(n)) return 'light'; if(/faras_zad|red1/.test(n)) return 'red'; if(/^pov_/.test(n)) return 'amber'; if(/fog1/.test(n)) return 'light'; return null; } },
+};
+
+const SCHEMES = [
+  { id:'msk',  name:'Такси · Москва',       sub:'жёлтый кузов, шашки', paint:0xf7c800, taxi:true,
+    note:'Жёлтый кузов и шашки — как требует Москва. Реклама под шашками, не закрывает их.' },
+  { id:'mo',   name:'Такси · Подмосковье',  sub:'белый, жёлто-серые полосы', paint:0xf3f3f1, taxi:true, stripes:true,
+    note:'Белый кузов с жёлтой и серой полосой и шашками. Реклама выше полос.' },
+  { id:'frakht',name:'Фрахт',               sub:'без символики такси', paint:0xf3f3f1, taxi:false,
+    note:'Во фрахте нет шашек и фонаря такси. Только реклама франшизы.' },
+  { id:'grey', name:'Фрахт · серый',         sub:'без символики такси', paint:0x8b8f93, taxi:false,
+    note:'Серый кузов, без символики такси.' },
+];
+
+const STYLES = [
+  { id:'night', name:'Ночь', bg:'#141516', fg:'#ffffff', acc:'#ffd21a', sub:'#e9e6dd', panel:true },
+  { id:'sun',   name:'Жёлтый', bg:'#ffd21a', fg:'#141516', acc:'#141516', sub:'#2a2400', panel:true },
+  { id:'clean', name:'Чисто', bg:null, fg:'#141516', acc:'#ffd21a', sub:'#2b2d2f', panel:false },
+];
+
+const SITE = 'franch-taxi.ru';
+const ZONES = [
+  { id:'left', tab:'Левый борт', who:'Франчайзи — открыть свой парк', utm:'left',
+    vars:[
+      { t:'Открой свой таксопарк', s:'Франшиза FRANCH TAXI без паушального взноса', c:'Условия — по QR', ok:true,
+        why:'Главный смысл Владимира — открытие парка. «Без вложений» заменено на точное «без паушального взноса» (концессия п. 4.2).' },
+      { t:'Свой таксопарк с FRANCH TAXI', s:'CRM, обучение и поддержка сети с первого дня', c:SITE, ok:true,
+        why:'Без цифр и обещаний — говорим, что получает франч.' },
+      { t:'Открой свой таксопарк', s:'Прибыль до 1 млн ₽ в месяц*', c:'*пример расчёта для парка, не гарантия — по QR', ok:false,
+        why:'Как в черновике, но цифру нужно подтвердить расчётом, а сноска должна читаться. Ставить только с готовым расчётом на сайте.' },
+    ]},
+  { id:'right', tab:'Правый борт', who:'Водители и курьеры', utm:'right',
+    vars:[
+      { t:'Водителям и курьерам', s:'Такси на своём или нашем авто · Доставка еды и посылок', c:'Подключение — по QR', ok:true,
+        why:'«Работа» заменена на «подключение»: водители и курьеры — самозанятые. Яндекса нет.' },
+      { t:'Доход за рулём и в доставке', s:'Таксист: своё или наше авто · Курьер: пешком или на авто', c:SITE, ok:true,
+        why:'Слово «доход» вместо «работа» — как согласовал Владимир 18.11.' },
+      { t:'Доход водителя до 260 000 ₽/мес*', s:'Своё или наше авто · Курьерам — доставка', c:'*пример расчёта, не гарантия — по QR', ok:false,
+        why:'Цифра из черновика. Нужен подтверждённый расчёт, на который ссылаемся; без него — риск недостоверной рекламы.' },
+    ]},
+  { id:'rear', tab:'Заднее стекло', who:'Агенты — приводят парки и водителей', utm:'rear',
+    vars:[
+      { t:'Стань агентом FRANCH TAXI', s:'Вознаграждение за каждого, кого приведёшь', c:'', ok:true,
+        why:'Агентов просил указать Владимир. «Доход не ограничен» заменено: выплаты — право сети (Прил. 3, п. 5.4).' },
+      { t:'Приводи водителей и парки', s:'Получай вознаграждение — агент FRANCH TAXI', c:'', ok:true,
+        why:'Тот же смысл, акцент на действии.' },
+      { t:'FRANCH TAXI', s:'Агентам · Водителям · Франчайзи', c:'', ok:true,
+        why:'Коротко: все три аудитории одной строкой.' },
+    ]},
+  { id:'hood', tab:'Капот', who:'Бренд — видно спереди', utm:'hood',
+    vars:[
+      { t:'FRANCH TAXI', s:SITE, c:'', ok:true, qr:false,
+        why:'Название крупно — как хотел Владимир. QR на капоте не ставим: его не отсканировать.' },
+      { t:'FRANCH TAXI', s:'Сеть таксопарков', c:'', ok:true, qr:false,
+        why:'Только бренд и что это.' },
+      { t:'FRANCH TAXI', s:SITE, c:'', ok:false, qr:true,
+        why:'Вариант Владимира с QR на капоте. Показан для сравнения: с капота QR почти никто не отсканирует.' },
+    ]},
+];
+const SAME = { t:'FRANCH TAXI', cols:[['Открой свой таксопарк','без паушального взноса'],['Водителям и курьерам','своё или наше авто'],['Агентам','вознаграждение за каждого']] };
+
+const state = { model:'jolion', scheme:'msk', style:'night', split:'diff', area:'doors', zone:'left', pick:{left:0,right:0,rear:0,hood:0} };
+try{ Object.assign(state, JSON.parse(localStorage.getItem('ft-wrap')||'{}')); }catch(e){}
+const save = ()=>{ try{ localStorage.setItem('ft-wrap', JSON.stringify(state)); }catch(e){} };
+
+/* ---------------- Сцена ---------------- */
+const canvas = document.getElementById('c');
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:'high-performance' });
+renderer.setClearColor(0x000000, 0);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 100);
+camera.position.set(6.2, 2.4, 6.4);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.enablePan = false; controls.minDistance = 2.2; controls.maxDistance = 14;
+controls.maxPolarAngle = Math.PI*0.49; controls.target.set(0,0.75,0);
+
+const key = new THREE.DirectionalLight(0xffffff, 1.4); key.position.set(4,8,5); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5); fill.position.set(-6,4,-4); scene.add(fill);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x2a2a2a, 0.35));
+
+// пол с мягкой тенью
+const shadowTex = (()=>{ const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d'); const r=g.createRadialGradient(128,128,10,128,128,128); r.addColorStop(0,'rgba(0,0,0,.75)'); r.addColorStop(.55,'rgba(0,0,0,.35)'); r.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=r; g.fillRect(0,0,256,256); return new THREE.CanvasTexture(c); })();
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1,1), new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, depthWrite:false }));
+shadow.rotation.x = -Math.PI/2; shadow.position.y = 0.002; scene.add(shadow);
+const floorFade = (()=>{ const c=document.createElement('canvas'); c.width=c.height=512; const g=c.getContext('2d'); const r=g.createRadialGradient(256,256,0,256,256,256); r.addColorStop(0,'#fff'); r.addColorStop(.45,'#bbb'); r.addColorStop(1,'#000'); g.fillStyle=r; g.fillRect(0,0,512,512); return new THREE.CanvasTexture(c); })();
+const floor = new THREE.Mesh(new THREE.CircleGeometry(9,96), new THREE.MeshStandardMaterial({ color:0x26292c, roughness:.38, metalness:.35, alphaMap:floorFade, transparent:true, depthWrite:false }));
+floor.rotation.x = -Math.PI/2; floor.renderOrder = -2; shadow.renderOrder = -1; scene.add(floor);
+
+const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+const cache = {};
+let car = null, carBox = new THREE.Box3(), carSize = new THREE.Vector3();
+let paintMeshes = [], glassMeshes = [], skinMeshes = [], decals = [], extras = [];
+let parts = [], openAmt = 0, openTarget = 0, onParts = [];
+
+/* --- классификация материалов --- */
+const R = {
+  hide: /mat_|invisible|ground|floor|shadow|plane0|backdrop|studio/i,
+  glass: /glass|window|windshield|sklo|boli|steklo|translucent|vidro|glas\b/i,
+  tire: /tire|tyre|guma|rubber|luntai|tread|sidewall/i,
+  light: /light|lamp|led|svetl|deng|headl|tail|stop|blinkr|turn/i,
+  chrome: /chrome|chrom|duge|alumin|polished|silver_trim/i,
+  rim: /(^|[^a-z])rims?([^a-z]|$)|kola|wheel|disc|disk|brake|kaliper|caliper|shachepan/i,
+  black: /black|plast|matte|deep|cern|trim|dipan|grille|radiator|keramik|klavir/i,
+  paint: /body|paint|primary|kastle|lak\b|carpaint|car_paint|kuzov/i,
+};
+const MAT = {
+  glass: ()=>new THREE.MeshPhysicalMaterial({ color:0x0e1418, roughness:.06, metalness:.1, transparent:true, opacity:.88, clearcoat:1, side:THREE.DoubleSide }),
+  tire:  ()=>new THREE.MeshStandardMaterial({ color:0x161616, roughness:.9 }),
+  light: ()=>new THREE.MeshPhysicalMaterial({ color:0xc9d3da, roughness:.05, metalness:.6, clearcoat:1 }),
+  red:   ()=>new THREE.MeshPhysicalMaterial({ color:0x8a0a0a, roughness:.15, metalness:.1, clearcoat:1, emissive:0x3a0000 }),
+  amber: ()=>new THREE.MeshPhysicalMaterial({ color:0xd07a10, roughness:.15, metalness:.1, clearcoat:1 }),
+  chrome:()=>new THREE.MeshStandardMaterial({ color:0xd9dcdf, roughness:.12, metalness:1 }),
+  rim:   ()=>new THREE.MeshStandardMaterial({ color:0x9aa0a6, roughness:.3, metalness:.9 }),
+  black: ()=>new THREE.MeshStandardMaterial({ color:0x121314, roughness:.55, metalness:.1 }),
+};
+let paintMat = null;
+function makePaint(hex){ return new THREE.MeshPhysicalMaterial({ color:hex, roughness:.32, metalness:.15, clearcoat:1, clearcoatRoughness:.06 }); }
+
+function classify(mesh){
+  const n = ((mesh.material && mesh.material.name)||'') + ' ' + (mesh.name||'');
+  if (R.hide.test(mesh.name||'')) return 'hide';
+  if (R.glass.test(n)) return 'glass';
+  if (R.tire.test(n)) return 'tire';
+  if (R.light.test(n)) return /rear|stop|tail|zad|brake_l|hou/i.test(n) ? 'red' : /turn|blinkr|amber|indicator/i.test(n) ? 'amber' : 'light';
+  if (R.rim.test(n)) return 'rim';
+  if (R.chrome.test(n)) return 'chrome';
+  if (R.black.test(n)) return 'black';
+  if (R.paint.test(n)) return 'paint';
+  return 'other';
+}
+
+async function loadModel(id){
+  const m = MODELS.find(x=>x.id===id);
+  if (!cache[id]) cache[id] = await loader.loadAsync(m.file);
+  return cache[id].scene.clone(true);
+}
+
+async function showModel(){
+  document.getElementById('loading').hidden = false;
+  const m = MODELS.find(x=>x.id===state.model); const cfg = CFG[m.id]||{};
+  let root;
+  try { root = await loadModel(m.id); } catch(e){ document.getElementById('loading').textContent='Не удалось загрузить модель'; return; }
+  if (car){ scene.remove(car); disposeDecals(); }
+  car = new THREE.Group(); car.add(root);
+  paintMeshes = []; glassMeshes = []; skinMeshes = [];
+  const sch = SCHEMES.find(s=>s.id===state.scheme);
+  paintMat = makePaint(sch.paint);
+  // убрать мусор и раскрасить
+  const toRemove = [];
+  root.traverse(o=>{
+    if (!o.isMesh) return;
+    if (cfg.hide && cfg.hide.test((o.name||'')+' '+((o.material&&o.material.name)||''))) { toRemove.push(o); return; }
+    let cls = (cfg.map && cfg.map(o)) || classify(o);
+    o.userData.cls = cls; o.userData.mname = (o.material&&o.material.name)||'';
+    if (cls==='hide'){ toRemove.push(o); return; }
+    const tex = o.material && (o.material.map);
+    if (cls==='paint'){ o.material = paintMat; paintMeshes.push(o); }
+    else if (cls==='glass'){ o.material = MAT.glass(); glassMeshes.push(o); }
+    else if (MAT[cls] && !tex) o.material = MAT[cls]();
+    else if (cls==='other' && !tex){ if (cfg.otherPaint){ o.material = paintMat; paintMeshes.push(o); } else if (!cfg.keepOther) o.material = MAT.black(); }
+    if (cls==='paint' || cls==='black' || cls==='chrome' || cls==='other') skinMeshes.push(o);
+    o.castShadow = false; o.receiveShadow = false;
+  });
+  toRemove.forEach(o=>o.parent && o.parent.remove(o));
+  // нормализация: длина по X, перёд в +X, колёса на полу
+  root.rotation.y = cfg.rotY||0;
+  root.updateMatrixWorld(true);
+  let box = new THREE.Box3().setFromObject(root);
+  let size = box.getSize(new THREE.Vector3());
+  if (size.z > size.x){ root.rotation.y += Math.PI/2; root.updateMatrixWorld(true); box.setFromObject(root); size = box.getSize(new THREE.Vector3()); }
+  if ((cfg.front||1) < 0){ root.rotation.y += Math.PI; root.updateMatrixWorld(true); box.setFromObject(root); }
+  const s = m.L / size.x; root.scale.multiplyScalar(s); root.updateMatrixWorld(true);
+  box.setFromObject(root); const c = box.getCenter(new THREE.Vector3());
+  root.position.x -= c.x; root.position.z -= c.z; root.position.y -= box.min.y;
+  root.updateMatrixWorld(true);
+  scene.add(car); car.updateMatrixWorld(true);
+  parts = [];
+  { // открывающиеся части: двери, капот, багажник — ставим шарнир по краю детали
+    const groups = {};
+    root.traverse(o=>{ const m = /^(door_[dp]side_[fr]|bonnet|boot)(\.\d+)?(_\d+)?$/.exec(o.name||''); if (m){ let a=o.parent, nested=false; while(a){ if(/^(door_|bonnet|boot)/.test(a.name||'')) { nested=true; break; } a=a.parent; } if(!nested) (groups[m[1]]=groups[m[1]]||[]).push(o); } });
+    for (const [type, nodes] of Object.entries(groups)){
+      const bb = new THREE.Box3(); nodes.forEach(n=>bb.expandByObject(n)); if (bb.isEmpty()) continue;
+      const pivot = new THREE.Object3D(); let axis, ang;
+      if (type.startsWith('door')){ const zc = (bb.min.z+bb.max.z)/2; const out = zc>0 ? bb.max.z : bb.min.z; pivot.position.set(bb.max.x, (bb.min.y+bb.max.y)/2, out); axis='y'; ang = zc>0 ? 1.05 : -1.05; }
+      else if (type==='bonnet'){ pivot.position.set(bb.min.x, bb.max.y, 0); axis='z'; ang = 0.85; }
+      else { pivot.position.set(bb.max.x, bb.max.y, 0); axis='z'; ang = -1.0; }
+      car.add(pivot); pivot.updateMatrixWorld(true);
+      nodes.forEach(n=>pivot.attach(n));
+      parts.push({ node:pivot, type, axis, ang, q0:pivot.quaternion.clone() });
+    }
+  }
+  openAmt = 0; openTarget = 0;
+  document.getElementById('openBtn').hidden = !parts.length;
+  document.getElementById('openBtn').setAttribute('aria-pressed','false');
+  // защита: мелкие детали у земли (диски), попавшие в «кузов», — красим как диски
+  paintMeshes = paintMeshes.filter(o=>{ const b=new THREE.Box3().setFromObject(o), sz=b.getSize(new THREE.Vector3()), c=b.getCenter(new THREE.Vector3());
+    if (sz.x<0.9 && sz.y<0.9 && sz.z<0.6 && c.y<0.55){ o.material = MAT.rim(); const i=skinMeshes.indexOf(o); if(i>=0) skinMeshes.splice(i,1); return false; } return true; });
+  carBox.setFromObject(car); carBox.getSize(carSize);
+  shadow.scale.set(carSize.x*1.35, carSize.z*1.6, 1);
+  controls.target.set(0, carSize.y*0.48, 0);
+  if (!paintMeshes.length){ // нет отдельного материала кузова — накладки ставим на весь корпус
+    car.traverse(o=>{ if(o.isMesh && !glassMeshes.includes(o)) paintMeshes.push(o); });
+  }
+  buildDecals();
+  document.getElementById('loading').hidden = true;
+  renderCredits();
+}
+
+/* ---------------- Текстуры наклеек ---------------- */
+const qrCache = {};
+function qrCanvas(text){
+  if (qrCache[text]) return qrCache[text];
+  const q = qrcode(0,'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), px = 8, pad = 4*px, size = n*px + pad*2;
+  const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
+  g.fillStyle='#fff'; g.fillRect(0,0,size,size); g.fillStyle='#111';
+  for (let r=0;r<n;r++) for (let k=0;k<n;k++) if (q.isDark(r,k)) g.fillRect(pad+k*px, pad+r*px, px, px);
+  return (qrCache[text]=c);
+}
+function fitText(g, text, maxW, maxSize, minSize, font, weight){
+  let s = maxSize; do { g.font = `${weight} ${s}px ${font}`; if (g.measureText(text).width <= maxW) return s; s -= 2; } while (s > minSize);
+  g.font = `${weight} ${minSize}px ${font}`; return minSize;
+}
+function wrapLines(g, text, maxW){
+  const words = text.split(' '); const lines=[]; let cur='';
+  for (const w of words){ const t = cur? cur+' '+w : w; if (g.measureText(t).width > maxW && cur){ lines.push(cur); cur=w; } else cur=t; }
+  if (cur) lines.push(cur); return lines;
+}
+const DISPLAY = "Unbounded, 'Arial Black', sans-serif", BODY = "Manrope, Arial, sans-serif";
+
+/* Премиальная наклейка: надпись бренда, крупный заголовок, подзаголовок, кнопка-призыв, QR в белой плашке.
+   Все размеры — от высоты наклейки, чтобы на любом кузове пропорции были одинаковыми. */
+function panelTexture(w, h, v, opts){
+  const st = STYLES.find(s=>s.id===state.style);
+  const PX = Math.min(2600, renderer.capabilities.maxTextureSize) / Math.max(w, h);   // пикселей на метр — чётко при приближении
+  const W = Math.round(w*PX), H = Math.round(h*PX);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const glass = !!opts.glass;
+  const panel = st.panel || glass;
+  const bg = glass ? 'rgba(10,11,12,0.94)' : st.bg;
+  const dark = glass || (st.panel ? st.id !== 'sun' : !!opts.onDark);
+  const ink = dark ? '#ffffff' : '#141516';
+  const sub = dark ? 'rgba(255,255,255,.82)' : 'rgba(20,21,22,.78)';
+  const acc = st.id === 'sun' && !glass ? '#141516' : '#ffd21a';
+  const accInk = acc === '#ffd21a' ? '#141516' : '#ffd21a';
+  const R = Math.min(W, H) * 0.10;
+  if (panel){
+    g.save(); roundRect(g, 0, 0, W, H, R); g.clip();
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    if (!glass){ // мягкий блик сверху
+      const sh = g.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(255,255,255,.10)'); sh.addColorStop(.45, 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(0, 0, W, H);
+    }
+    // диагональные «скоростные» полосы у правого края
+    g.globalAlpha = dark ? .16 : .12; g.fillStyle = acc;
+    for (let i = 0; i < 4; i++){ const x = W*0.56 + i*H*0.16; g.beginPath(); g.moveTo(x, H); g.lineTo(x + H*0.07, H); g.lineTo(x + H*0.07 + H*0.5, 0); g.lineTo(x + H*0.5, 0); g.closePath(); g.fill(); }
+    g.globalAlpha = 1; g.restore();
+  }
+  const pad = H * 0.13;
+  const withQR = opts.qr !== false;
+  const qrS = withQR ? Math.min(H - pad*2, W*0.3) : 0;
+  const textW = W - pad*2 - (withQR ? qrS + pad*0.9 : 0);
+  let x = pad, y = pad;
+  g.textBaseline = 'alphabetic';
+  // надпись бренда
+  const eyebrow = Math.round(H*0.085);
+  g.font = `800 ${eyebrow}px ${DISPLAY}`; g.fillStyle = acc;
+  if (v.t.indexOf('FRANCH TAXI') !== 0){ g.fillText('FRANCH TAXI', x, y + eyebrow); y += eyebrow*1.7; }
+  // заголовок (до 2 строк)
+  let ts = Math.round(H*0.2); let lines = [v.t];
+  g.font = `800 ${ts}px ${DISPLAY}`;
+  while (g.measureText(v.t).width > textW && ts > H*0.125){ ts -= 2; g.font = `800 ${ts}px ${DISPLAY}`; }
+  if (g.measureText(v.t).width > textW){ ts = Math.round(H*0.15); for (;;){ g.font = `800 ${ts}px ${DISPLAY}`; lines = wrapLines(g, v.t, textW); if ((lines.length <= 2 && lines.every(l=>g.measureText(l).width <= textW)) || ts < H*0.07) break; ts -= 2; } }
+  g.fillStyle = ink;
+  for (const L of lines){ y += ts*0.98; g.fillText(L, x, y); y += ts*0.14; }
+  // подзаголовок
+  const ss = Math.round(Math.min(H*0.095, ts*0.6));
+  g.font = `600 ${ss}px ${BODY}`; g.fillStyle = sub; y += ss*0.55;
+  for (const L of wrapLines(g, v.s, textW).slice(0,2)){ y += ss*1.05; g.fillText(L, x, y); y += ss*0.22; }
+  // призыв — «кнопка»
+  if (v.c){
+    const cs = Math.round(H*0.072); g.font = `700 ${cs}px ${BODY}`;
+    const cw = Math.min(textW, g.measureText(v.c).width + cs*1.6), ch = cs*1.9;
+    const cy = Math.max(y + cs*0.9, H - pad - ch);
+    if (cy + ch <= H - pad*0.4){
+      g.fillStyle = acc; roundRect(g, x, cy, cw, ch, ch/2); g.fill();
+      g.fillStyle = accInk; g.save(); g.beginPath(); g.rect(x, cy, cw, ch); g.clip(); g.fillText(v.c, x + cs*0.8, cy + ch*0.66); g.restore();
+    }
+  }
+  // QR
+  if (withQR){
+    const q = qrCanvas(opts.url); const tile = qrS, qx = W - pad - tile, qy = (H - tile)/2;
+    g.fillStyle = '#ffffff'; roundRect(g, qx, qy, tile, tile, tile*0.08); g.fill();
+    const m = tile*0.06, qs = tile - 2*m - tile*0.09; g.imageSmoothingEnabled = false; g.drawImage(q, qx + (tile - qs)/2, qy + m, qs, qs);
+    g.font = `700 ${Math.round(tile*0.065)}px ${BODY}`; g.fillStyle = '#141516'; g.textAlign = 'center'; g.fillText('Наведите камеру', qx + tile/2, qy + tile - tile*0.045); g.textAlign = 'left';
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.generateMipmaps = true; return t;
+}
+function sameTexture(w, h, url){
+  const st = STYLES.find(s=>s.id===state.style);
+  const S = 1024/Math.max(w,h); const W=Math.round(w*S*1.6), H=Math.round(h*S*1.6);
+  const c = document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+  if (st.panel){ g.fillStyle=st.bg; roundRect(g,0,0,W,H,Math.min(W,H)*.07); g.fill(); }
+  const ink = st.panel? st.fg : st.fg, sub = st.panel? st.sub : st.sub;
+  const pad = H*.1, qrS = H - pad*2;
+  g.textBaseline='top'; g.fillStyle=st.acc; g.font=`800 ${H*.16}px ${DISPLAY}`; g.fillText('FRANCH TAXI', pad, pad);
+  const colW = (W - pad*3 - qrS)/3; const y0 = pad + H*.26;
+  SAME.cols.forEach((col,i)=>{ const x = pad + i*colW; g.fillStyle=ink; const fs = fitText(g, col[0], colW - H*.05, H*.085, H*.045, BODY, 800);
+    let y=y0; for (const L of wrapLines(g,col[0],colW-H*.05).slice(0,3)){ g.fillText(L,x,y); y+=fs*1.15; }
+    g.font=`600 ${H*.055}px ${BODY}`; g.fillStyle=sub; for (const L of wrapLines(g,col[1],colW-H*.05).slice(0,3)){ g.fillText(L,x,y+H*.02); y+=H*.07; } });
+  const q = qrCanvas(url); const qx=W-pad-qrS; g.fillStyle='#fff'; roundRect(g,qx-H*.02,pad-H*.02,qrS+H*.04,qrS+H*.04,H*.04); g.fill(); g.imageSmoothingEnabled=false; g.drawImage(q,qx,pad,qrS,qrS);
+  const t = new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
+function checkerTexture(stripes){
+  const W=2048,H=256; const c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+  g.clearRect(0,0,W,H);
+  const cell = H*0.22, rows=2, y0 = 0;
+  for (let r=0;r<rows;r++) for (let k=0;k*cell<W;k++){ g.fillStyle = ((r+k)%2)?'#111':'#f5f5f2'; g.fillRect(k*cell, y0 + r*cell, cell, cell); }
+  if (stripes){ g.fillStyle='#ffd21a'; g.fillRect(0, H*0.62, W, H*0.16); g.fillStyle='#8f9397'; g.fillRect(0, H*0.8, W, H*0.12); }
+  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t;
+}
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+
+/* ---------------- Наклейки на кузов ---------------- */
+const ray = new THREE.Raycaster();
+function hit(origin, dir, targets){ ray.set(origin, dir.clone().normalize()); const h = ray.intersectObjects(targets, false); return h[0] || null; }
+function basis(right, up, normal){ const m = new THREE.Matrix4().makeBasis(right, up, normal); return new THREE.Euler().setFromRotationMatrix(m); }
+
+function addDecal(targets, pos, euler, size, tex, zone){
+  const mat = new THREE.MeshStandardMaterial({ map:tex, transparent:true, depthTest:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-4, roughness:.35, metalness:0 });
+  const group = new THREE.Group(); group.userData.zone = zone;
+  for (const t of targets){
+    try{ const geo = new DecalGeometry(t, pos, euler, size); if (geo.attributes.position.count===0){ geo.dispose(); continue; }
+      const d = new THREE.Mesh(geo, mat); d.userData.zone = zone;
+      let a = t; while (a && !parts.some(p=>p.node===a)) a = a.parent;
+      if (a){ a.updateMatrixWorld(true); geo.applyMatrix4(new THREE.Matrix4().copy(a.matrixWorld).invert()); a.add(d); onParts.push(d); }
+      else group.add(d);
+    }catch(e){}
+  }
+  scene.add(group); decals.push(group); return group;
+}
+function disposeDecals(){ for (const d of onParts){ d.parent && d.parent.remove(d); d.geometry.dispose(); } onParts = []; for (const g of decals){ scene.remove(g); g.traverse(o=>{ if(o.isMesh){ o.geometry.dispose(); if(o.material.map) o.material.map.dispose(); o.material.dispose(); } }); } decals=[]; for(const e of extras){ scene.remove(e); } extras=[]; }
+
+function buildDecals(){
+  disposeDecals();
+  if (!car) return;
+  const sch = SCHEMES.find(s=>s.id===state.scheme);
+  const L = carSize.x, H = carSize.y, W = carSize.z;
+  const yWheelTop = H*0.40;            // примерно верх арок
+  const yBelt = H*0.66;               // линия окон
+  // зоны по бортам
+  const doorX0 = state.area==='doors' ? -L*0.20 : -L*0.36;
+  const doorX1 = state.area==='doors' ?  L*0.17 :  L*0.30;
+  const cx = (doorX0+doorX1)/2, w = doorX1-doorX0;
+  let yLo = H*0.24, yHi = yBelt - H*0.05;
+  if (sch.taxi) yHi -= H*0.10;
+  if (sch.stripes) yLo = H*0.34;
+  const hgt = (yHi - yLo); const cy = (yLo+yHi)/2;
+  for (const side of ['right','left']){
+    const sign = side==='right' ? 1 : -1;      // правый борт = +Z
+    const origin = new THREE.Vector3(cx, cy, sign*(W*1.5));
+    const h = hit(origin, new THREE.Vector3(0,0,-sign), paintMeshes);
+    const z = h ? h.point.z : sign*W/2;
+    const pos = new THREE.Vector3(cx, cy, z);
+    const right = new THREE.Vector3(sign,0,0), up = new THREE.Vector3(0,1,0), normal = new THREE.Vector3(0,0,sign);
+    const e = basis(right, up, normal);
+    // символика такси
+    if (sch.taxi){
+      const bx0 = -L*0.40, bx1 = L*0.30, bcx = (bx0+bx1)/2, bw = bx1-bx0;
+      const band = new THREE.Vector3(bcx, yBelt - H*0.085, z);
+      addDecal(paintMeshes, band, e, new THREE.Vector3(bw, H*0.11, W*0.2), checkerTexture(false), 'taxi');
+      if (sch.stripes){ addDecal(paintMeshes, new THREE.Vector3(bcx, H*0.285, z), e, new THREE.Vector3(bw, H*0.055, W*0.2), stripeTex('#ffd21a'), 'taxi');
+                        addDecal(paintMeshes, new THREE.Vector3(bcx, H*0.235, z), e, new THREE.Vector3(bw, H*0.03, W*0.2), stripeTex('#8f9397'), 'taxi'); }
+    }
+    const zone = side==='right' ? 'right' : 'left';
+    const url = `https://${SITE}/?utm_source=car&utm_content=${zone}`;
+    let tex;
+    if (state.split==='same') tex = sameTexture(w, hgt, `https://${SITE}/?utm_source=car&utm_content=${zone}-all`);
+    else { const Z = ZONES.find(z=>z.id===zone); tex = panelTexture(w, hgt, Z.vars[state.pick[zone]], { url, onDark: sch.paint < 0x999999 }); }
+    addDecal(skinMeshes.length?skinMeshes:paintMeshes, pos, e, new THREE.Vector3(w, hgt, W*0.22), tex, zone);
+  }
+  // заднее стекло (перфоплёнка)
+  {
+    const cfgR = (CFG[state.model]||{}).rearGlass; const extra = []; if (cfgR) car.traverse(o=>{ if (o.isMesh && cfgR.test(o.userData.mname||'')) extra.push(o); });
+    const targets = glassMeshes.concat(extra).length ? glassMeshes.concat(extra) : paintMeshes;
+    // меряем стекло: где по высоте и ширине луч сзади попадает в стекло
+    const hitsY = [];
+    for (let f = 0.45; f <= 1.0; f += 0.01){ const r = hit(new THREE.Vector3(-L*1.5, H*f, 0), new THREE.Vector3(1,0,0), targets); if (r && r.point.x < -L*0.15) hitsY.push(r); }
+    if (hitsY.length >= 3){
+      // самый длинный непрерывный участок стекла
+      let best = [], cur = [];
+      for (let k = 0; k < hitsY.length; k++){ if (cur.length && hitsY[k].point.y - cur[cur.length-1].point.y > H*0.025){ if (cur.length > best.length) best = cur; cur = []; } cur.push(hitsY[k]); }
+      if (cur.length > best.length) best = cur;
+      const bot = best[0].point, top = best[best.length-1].point, mid = best[Math.floor(best.length/2)];
+      const slope = bot.distanceTo(top);
+      const cy = mid.point.y;
+      let zMax = 0; for (let zz = 0.02; zz < W/2; zz += 0.02){ const r = hit(new THREE.Vector3(-L*1.5, cy, zz), new THREE.Vector3(1,0,0), targets); if (r && Math.abs(r.point.x - mid.point.x) < 0.25) zMax = zz; else if (zz > 0.3) break; }
+      const n = mid.face ? mid.face.normal.clone().transformDirection(mid.object.matrixWorld) : new THREE.Vector3(-1,0,0);
+      if (n.x > 0) n.negate(); n.z = 0; n.normalize();
+      const right = new THREE.Vector3(0,0,1); const up = new THREE.Vector3().crossVectors(n, right).normalize(); if (up.y < 0) up.negate();
+      const e = basis(right, up, n);
+      const center = bot.clone().add(top).multiplyScalar(0.5);
+      const Z = ZONES.find(z=>z.id==='rear'); const v = Z.vars[state.pick.rear];
+      const ww = Math.max(0.6, zMax*2*0.86), hh = Math.min(slope*0.78, ww*0.42);
+      addDecal(targets, center, e, new THREE.Vector3(ww, hh, 0.35), panelTexture(ww, hh, v, { url:`https://${SITE}/?utm_source=car&utm_content=rear`, onDark:true, glass:true }), 'rear');
+    }
+  }
+  // капот
+  {
+    const hx = L*0.33;
+    const h = hit(new THREE.Vector3(hx, H*3, 0), new THREE.Vector3(0,-1,0), paintMeshes);
+    if (h){
+      const n = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0,1,0);
+      if (n.y < 0) n.negate(); n.z = 0; n.normalize();
+      const right = new THREE.Vector3(0,0,-1); const up = new THREE.Vector3().crossVectors(n, right).normalize(); if (up.x > 0) up.negate();
+      const e = basis(right, up, n);
+      const Z = ZONES.find(z=>z.id==='hood'); const v = Z.vars[state.pick.hood];
+      const ww = W*0.62, hh = L*0.13;
+      addDecal(paintMeshes, h.point, e, new THREE.Vector3(ww, hh, 0.4), panelTexture(ww, hh, { t:v.t, s:v.s, c:'' }, { url:`https://${SITE}/?utm_source=car&utm_content=hood`, qr:v.qr, onDark: sch.paint < 0x999999 }), 'hood');
+    }
+  }
+  // фонарь такси
+  if (sch.taxi){
+    const top = hit(new THREE.Vector3(-L*0.05, H*3, 0), new THREE.Vector3(0,-1,0), paintMeshes.concat(glassMeshes));
+    const y = top ? top.point.y : H;
+    const lt = (()=>{ const c=document.createElement('canvas'); c.width=512; c.height=128; const g=c.getContext('2d'); g.fillStyle='#ffd21a'; g.fillRect(0,0,512,128); const cs=32; for(let r=0;r<2;r++) for(let k=0;k<16;k++){ g.fillStyle=((r+k)%2)?'#141516':'#ffd21a'; g.fillRect(k*cs, 32+r*cs, cs, cs); } const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t; })();
+    const side = new THREE.MeshStandardMaterial({ map:lt, roughness:.35, emissive:0x2a2000 }); const plain = new THREE.MeshStandardMaterial({ color:0xffd21a, roughness:.35, emissive:0x2a2000 });
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.46), [plain, plain, plain, plain, side, side]);
+    lamp.position.set(-L*0.05, y + 0.06, 0); scene.add(lamp); extras.push(lamp);
+  }
+}
+function stripeTex(color){ const c=document.createElement('canvas'); c.width=64; c.height=8; const g=c.getContext('2d'); g.fillStyle=color; g.fillRect(0,0,64,8); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t; }
+
+/* ---------------- Камера ---------------- */
+let anim = null;
+function goView(v){
+  const L = carSize.x||4.5, H = carSize.y||1.6; const asp = camera.aspect||1.4; const d = Math.max(L,3)*1.55*Math.max(0.92, 0.95/asp);
+  const P = { three:[d*0.8,H*1.2,d*0.85], left:[0.01,H*0.75,-d*1.05], right:[0.01,H*0.75,d*1.05], rear:[-d*1.05,H*1.05,0.01], hood:[d*0.75,H*2.4,0.01] }[v];
+  if (!P) return;
+  const from = camera.position.clone(), to = new THREE.Vector3(...P); const t0 = performance.now(); const dur = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 650;
+  anim = (now)=>{ const k = Math.min(1,(now-t0)/dur); const e = k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; camera.position.lerpVectors(from,to,e); if(k>=1) anim=null; };
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{ spin=false; spinBtn.setAttribute('aria-pressed','false'); goView(b.dataset.view); }));
+let spin = false; const spinBtn = document.getElementById('spin');
+spinBtn.addEventListener('click',()=>{ spin=!spin; spinBtn.setAttribute('aria-pressed', String(spin)); });
+
+// тап по наклейке — выбрать зону
+let down = null;
+canvas.addEventListener('pointerdown', e=>{ down = [e.clientX, e.clientY]; document.getElementById('hint').hidden = true; });
+canvas.addEventListener('pointerup', e=>{
+  if (!down) return; const dx = e.clientX-down[0], dy = e.clientY-down[1]; down = null; if (dx*dx+dy*dy > 36) return;
+  const r = canvas.getBoundingClientRect(); const p = new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(p, camera); const hs = ray.intersectObjects(decals.concat(onParts), true);
+  const z = hs.find(h=>h.object.userData.zone && h.object.userData.zone!=='taxi');
+  if (z){ state.zone = z.object.userData.zone; renderZones(); document.getElementById('zoneTabs').scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+});
+
+function resize(){ const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w,h,false); camera.aspect = w/h; camera.fov = w < 600 ? 40 : 32; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+const openBtn = document.getElementById('openBtn');
+openBtn.addEventListener('click', ()=>{ openTarget = openTarget ? 0 : 1; openBtn.setAttribute('aria-pressed', String(!!openTarget)); openBtn.textContent = openTarget ? 'Закрыть двери' : 'Открыть двери'; });
+const AX = { x:new THREE.Vector3(1,0,0), y:new THREE.Vector3(0,1,0), z:new THREE.Vector3(0,0,1) }; const _q = new THREE.Quaternion();
+function animateParts(){ if (!parts.length) return; const cfg = CFG[state.model]||{}; const P = cfg.parts||{}; openAmt += (openTarget - openAmt)*0.12; if (Math.abs(openTarget-openAmt) < 0.001) openAmt = openTarget;
+  for (const p of parts){ _q.setFromAxisAngle(AX[p.axis], p.ang*openAmt); p.node.quaternion.copy(p.q0).multiply(_q); } }
+renderer.setAnimationLoop((now)=>{ if (anim) anim(now); animateParts(); if (spin && car){ const a = 0.004; const p = camera.position; const x = p.x*Math.cos(a) - p.z*Math.sin(a), z = p.x*Math.sin(a) + p.z*Math.cos(a); p.x=x; p.z=z; } controls.update(); renderer.render(scene, camera); });
+
+/* ---------------- Панель ---------------- */
+const $ = id=>document.getElementById(id);
+function chip(label, sub, pressed, on){ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.setAttribute('aria-pressed', String(pressed)); b.innerHTML = label + (sub?`<small>${sub}</small>`:''); b.addEventListener('click', on); return b; }
+function renderModels(){ const el=$('models'); el.replaceChildren(...MODELS.map(m=>chip(m.name, m.kind, m.id===state.model, ()=>{ state.model=m.id; save(); renderModels(); showModel(); renderSummary(); }))); }
+function renderSchemes(){ const el=$('schemes'); el.replaceChildren(...SCHEMES.map(s=>chip(s.name, s.sub, s.id===state.scheme, ()=>{ state.scheme=s.id; save(); renderSchemes(); if(paintMat) paintMat.color.setHex(s.paint); buildDecals(); renderSummary(); })));
+  $('schemeNote').textContent = SCHEMES.find(s=>s.id===state.scheme).note; }
+function seg(el, items, key){ el.replaceChildren(...items.map(([v,l])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=l; b.setAttribute('aria-pressed', String(state[key]===v)); b.addEventListener('click',()=>{ state[key]=v; save(); seg(el,items,key); buildDecals(); renderSummary(); renderZones(); }); return b; })); }
+function renderStyles(){ const el=$('styles'); el.replaceChildren(...STYLES.map(s=>{ const b=document.createElement('button'); b.type='button'; b.className='sw'; b.setAttribute('aria-pressed', String(s.id===state.style));
+  b.innerHTML = `<span class="p" style="background:${s.bg||'repeating-linear-gradient(45deg,#f3f3f1 0 8px,#e6e6e3 8px 16px)'};border:1px solid #333;display:block;position:relative"><span style="position:absolute;left:8px;top:8px;bottom:8px;width:4px;background:${s.acc};border-radius:2px"></span><span style="position:absolute;left:18px;top:9px;width:55%;height:6px;background:${s.fg};border-radius:3px"></span><span style="position:absolute;left:18px;top:20px;width:38%;height:4px;background:${s.fg};opacity:.6;border-radius:2px"></span></span>${s.name}`;
+  b.addEventListener('click',()=>{ state.style=s.id; save(); renderStyles(); buildDecals(); renderSummary(); }); return b; })); }
+function renderZones(){
+  const tabs = $('zoneTabs'); tabs.replaceChildren(...ZONES.map(z=>{ const b=document.createElement('button'); b.type='button'; b.className='zone-tab'; b.setAttribute('role','tab'); b.setAttribute('aria-selected', String(z.id===state.zone)); b.innerHTML = `${z.tab}<small>вариант ${state.pick[z.id]+1}</small>`; b.addEventListener('click',()=>{ state.zone=z.id; save(); renderZones(); goView(z.id==='left'?'left':z.id==='right'?'right':z.id==='rear'?'rear':'hood'); }); return b; }));
+  const Z = ZONES.find(z=>z.id===state.zone);
+  $('zoneWho').textContent = (state.split==='same' && (Z.id==='left'||Z.id==='right')) ? 'Сейчас режим «одинаково с двух сторон» — на бортах общий текст для всех. Переключите «разное по сторонам», чтобы выбрать вариант.' : 'Для кого: ' + Z.who;
+  $('vars').replaceChildren(...Z.vars.map((v,i)=>{ const b=document.createElement('button'); b.type='button'; b.className='var'; b.setAttribute('aria-pressed', String(state.pick[Z.id]===i));
+    b.innerHTML = `<span class="badge ${v.ok?'ok':'warn'}">${v.ok?'Можно ставить':'Нужна проверка'}</span><span class="t">${v.t}</span><span class="s">${v.s}${v.c?' · '+v.c:''}</span><span class="why">${v.why}</span>`;
+    b.addEventListener('click',()=>{ state.pick[Z.id]=i; save(); renderZones(); buildDecals(); renderSummary(); }); return b; }));
+}
+function summaryText(){
+  const m = MODELS.find(x=>x.id===state.model), s = SCHEMES.find(x=>x.id===state.scheme), st = STYLES.find(x=>x.id===state.style);
+  const line = id=>{ const Z=ZONES.find(z=>z.id===id), v=Z.vars[state.pick[id]]; return `${Z.tab} (вар. ${state.pick[id]+1}): «${v.t}» — ${v.s}${v.c?' · '+v.c:''}`; };
+  const sides = state.split==='same' ? 'Борта: одинаково с двух сторон — FRANCH TAXI · франчайзи / водители и курьеры / агенты' : line('left')+'\n'+line('right');
+  return `Макет оклейки FRANCH TAXI\nМашина: ${m.name}\nСхема: ${s.name}\nСтиль: ${st.name}\nПлощадь на борту: ${state.area==='doors'?'двери':'во весь борт'}\n${sides}\n${line('rear')}\n${line('hood')}`;
+}
+function renderSummary(){ $('summary').textContent = summaryText(); }
+$('copy').addEventListener('click', ()=>{ const t = summaryText(); const done=()=>{ $('copied').hidden=false; setTimeout(()=>$('copied').hidden=true, 2500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(()=>{ selectSummary(); }); else selectSummary(); });
+function selectSummary(){ const r=document.createRange(); r.selectNodeContents($('summary')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+function renderCredits(){ const m = MODELS.find(x=>x.id===state.model);
+  $('credits').innerHTML = `3D-модель «${m.name}»: автор ${m.author}, <a href="${m.url}" target="_blank" rel="noopener">Sketchfab</a>, лицензия ${m.lic}. Модель упрощена и перекрашена для макета. QR ведут на ${SITE} (в рабочих файлах — личный QR франча).`; }
+
+window.__ft = { state, showModel, buildDecals, goView, CFG, rearProbe:()=>{ const L=carSize.x,H=carSize.y; const out=[]; for (const f of [0.84,0.8,0.76,0.72,0.68,0.64]){ ray.set(new THREE.Vector3(-L*1.5,H*f,0), new THREE.Vector3(1,0,0)); const hs=ray.intersectObject(car,true); out.push(f+':'+hs.slice(0,3).map(h=>h.object.userData.mname+'/'+h.object.userData.cls+'@'+h.point.x.toFixed(2)).join(',')); } return out; }, colors:()=>{ const r={}; car&&car.traverse(o=>{ if(o.isMesh){ const n=o.userData.mname; const b=new THREE.Box3().setFromObject(o); const sz=b.getSize(new THREE.Vector3()); const a=sz.x*sz.y+sz.x*sz.z; const c=o.material.color?o.material.color.getHexString():''; const k=n+'#'+c+'#'+o.userData.cls; r[k]=(r[k]||0)+a; } }); return Object.entries(r).sort((x,y)=>y[1]-x[1]).slice(0,16).map(([k,v])=>k+':'+v.toFixed(1)); }, mats:()=>{ const r={}; car&&car.traverse(o=>{ if(o.isMesh){ const k=(o.userData.cls||'?'); const n=(o.userData.mname||'')+'|'+(o.name||''); (r[k]=r[k]||[]).push(n.slice(0,40)); } }); return r; }, info:()=>({ size:carSize.toArray().map(v=>+v.toFixed(2)), paint:paintMeshes.length, glass:glassMeshes.length, decals:decals.map(g=>g.userData.zone+':'+g.children.length) }) };
+renderModels(); renderSchemes();
+seg($('split'), [['diff','Разное по сторонам'],['same','Одинаково с двух сторон']], 'split');
+seg($('area'), [['doors','На двери'],['full','Во весь борт']], 'area');
+renderStyles(); renderZones(); renderSummary();
+(document.fonts ? document.fonts.load('800 40px Unbounded').then(()=>document.fonts.load('700 20px Manrope')) : Promise.resolve()).finally(()=>{ showModel().then(()=>goView('three')); });
+</script>
+
+</body>
+</html>
