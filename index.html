@@ -195,7 +195,7 @@ const CFG = {
     map:o=>{ const n=(o.material&&o.material.name)||'';
       if (/^Color_B07$/.test(n)) return 'paint';
       if (/^Color_B08$/.test(n)) return 'red';
-      if (/^Translucent/.test(n)) return 'keep';
+      if (/^Translucent/.test(n)) return 'glass';
       if (/^Color_M0[01]$/.test(n)) return 'chrome';
       return null; } },
   camry:   { front:+1, plate:{ front:0.47 }, hide:/metal_white/, rearGlass:/^Index_0_2$/ },
